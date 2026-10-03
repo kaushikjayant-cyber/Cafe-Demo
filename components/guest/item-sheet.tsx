@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MenuItem, MenuOptionGroup } from "@/lib/menu-types";
 import { formatINR } from "@/lib/money";
 
-import { useCart } from "./cart-store";
+import type { CartLine } from "./cart-store";
 import { DietMark } from "./diet-mark";
 import { QtyStepper } from "./qty-stepper";
 
@@ -28,8 +28,16 @@ function groupHint(group: MenuOptionGroup): string {
 
 const CLOSE_MS = 200;
 
-export function ItemSheet({ item, onClose }: { item: MenuItem; onClose: () => void }) {
-  const add = useCart((s) => s.add);
+export type NewCartLine = Omit<CartLine, "key">;
+
+interface ItemSheetProps {
+  item: MenuItem;
+  onClose: () => void;
+  /** Where the configured item goes: the guest cart, or a staff order ticket. */
+  onAdd: (line: NewCartLine) => void;
+}
+
+export function ItemSheet({ item, onClose, onAdd }: ItemSheetProps) {
   const [selected, setSelected] = useState(() => defaultSelection(item.groups));
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState("");
@@ -74,7 +82,7 @@ export function ItemSheet({ item, onClose }: { item: MenuItem; onClose: () => vo
 
   function submit() {
     if (missing) return;
-    add({
+    onAdd({
       itemId: item.id,
       name: item.name,
       optionIds: chosen.map((c) => c.option.id),

@@ -29,7 +29,20 @@ Environment files:
 | `.env.local` | `npm run build/start`, the CLI | **Cloud** Supabase project |
 
 Local Studio (database browser): <http://127.0.0.1:54323>. Reset the local DB to a clean
-migrated + seeded state with `npx supabase db reset`.
+migrated + seeded state with `npx supabase db reset`, then recreate the demo logins with
+`npm run seed:staff` (a reset also wipes auth users).
+
+### Demo cafe screens
+
+| Screen | URL (local) | Login |
+|---|---|---|
+| Guest menu (table T1) | `/t/bbtable001` | none |
+| Counter board | `/c/demo/staff` | `counter` |
+| New order (staff) | `/c/demo/staff/new` | `counter` |
+| Kitchen display | `/c/demo/kitchen` | `kitchen` |
+| Stock | `/c/demo/staff/stock` | any staff |
+
+Demo password: see `lib/demo.ts` (demo cafe only; the login page offers one-tap demo sign-in).
 
 ### Setting up Supabase
 

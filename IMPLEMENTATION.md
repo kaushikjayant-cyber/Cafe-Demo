@@ -647,3 +647,24 @@ CSS-only animations (no library, keeping the customer JS budget), all in `app/gl
 - Cart page slides in from the right; removed lines slide out; total pops when it changes; spinner while placing
 - Tracker: self-drawing tick for a just-placed order, status headline cross-fades, reached steps pop, connector lines fill, current step pulses
 - Toasts slide down from the top
+
+### Phase 2: Counter & kitchen (2026-10-03)
+**Done**
+- Staff auth: `/c/[slug]/login` (username or owner email + password, server action), synthetic staff emails `username.slug@STAFF_EMAIL_DOMAIN` [D-36], login rate limit, membership check (a valid account from another cafe is signed straight out), `requireStaff()` role guard, sign out. Demo cafe shows one-tap demo logins (`lib/demo.ts`, `npm run seed:staff`).
+- Counter board `/c/[slug]/staff`: New → In the kitchen → Ready → Served-unpaid columns (tabs on phones), age stripes (green/amber/red), notes highlighted, accept/reject (reasons) / start / ready / served, mark paid (cash/UPI/card) with GST invoice number, cancel, table-request strip with Done
+- Kitchen display `/c/[slug]/kitchen`: dark theme, big tickets with age-coloured headers, Start/Ready, count of orders waiting for the counter
+- Stock `/c/[slug]/staff/stock`: sold out today (auto-returns at next business-day start) / until further notice / back in stock; per-item options; **whole-menu option switch** ("out of oat milk" in one tap)
+- Staff ordering `/c/[slug]/staff/new` + `POST /api/staff/orders`: table or counter/takeaway, same item sheet, sent straight to the kitchen as accepted
+- Guests: "Call waiter" / "Request bill" (`POST /api/service-requests`, one per table per type per 2 min); open menus refresh when the counter pauses/resumes (Realtime broadcast)
+- Shift start: unlocks audio, Wake Lock (re-acquired on return), synthesised two-note chime, repeat every 20 s while anything needs attention, tab-title count, vibration where supported
+- Live data: `useLiveOrders` (Realtime + full reload on reconnect, tab focus and `online`, 30 s safety poll), connection indicator, optimistic updates with server reconciliation, "already updated on another device" handling
+- SQL: `mark_order_paid` (invoice on payment, completes served orders), serve-a-paid-order completes it, `set_item_sold_out_today`, `next_business_day_start`, `resolve_service_request`, `set_option_availability_by_name`
+- **110 tests** (+13)
+
+**Bug found and fixed:** Realtime authorises `postgres_changes` with the token a channel joined with. Channels created on page load joined *before* the cookie session was attached, so they counted as anonymous and RLS silently dropped every event (the board only updated via the 30 s poll). `subscribeWhenReady()` now sets the session token on the socket before any channel subscribes; all live views use it. This also fixes guest tracking for returning guests.
+
+**Verified in the browser:** order appears on the counter instantly with chime/title count; full flow Accept → Preparing → Ready → Served → Paid (UPI) → invoice `BB/2627/000001` → leaves the board; kitchen Start/Ready; staff order for T3 reaches the kitchen; table "wants the bill" appears and clears; sold out today → returns Sun 04:00 IST; whole-menu oat-milk switch; pause/resume reaches a visible guest menu within ~2 s; **disconnect test**: Realtime container stopped → board shows Offline → order placed during the outage → service restarted → board caught up within 5 s; kitchen login can't open the counter or call the staff-order API; wrong password gets a generic error.
+
+**Notes**
+- Background tabs are throttled by browsers; open menus catch up on focus (visibility refresh).
+- Kitchen sees orders after the counter accepts them (`accept_mode`); a "waiting for the counter" count is shown so nothing is invisible.

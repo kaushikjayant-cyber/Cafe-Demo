@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import type { GuestMenu, MenuItem } from "@/lib/menu-types";
-import { getBrowserClient } from "@/lib/supabase/browser";
+import { getBrowserClient, subscribeWhenReady } from "@/lib/supabase/browser";
+
+import { CAFE_STATUS_EVENT, cafeChannel } from "@/lib/realtime";
 
 import { useCart } from "./cart-store";
 
@@ -49,7 +51,14 @@ async function fetchRecentOrders(cafeId: string): Promise<RecentOrder[]> {
   return data ?? [];
 }
 
-type ItemRow ={ id: string; price_paise: number; is_available: boolean; sold_out_until: string | null; is_visible: boolean; archived_at: string | null };
+type ItemRow = {
+  id: string;
+  price_paise: number;
+  is_available: boolean;
+  sold_out_until: string | null;
+  is_visible: boolean;
+  archived_at: string | null;
+};
 type OptionRow = { id: string; price_delta_paise: number; is_available: boolean };
 
 export function GuestProvider({ menu, children }: { menu: GuestMenu; children: ReactNode }) {
@@ -114,7 +123,6 @@ export function GuestProvider({ menu, children }: { menu: GuestMenu; children: R
 
   // Live stock and price changes [D-21], with a full refresh whenever we may have missed events [D-26].
   useEffect(() => {
-    const supabase = getBrowserClient();
     let subscribedBefore = false;
     const refresh = (force = false) => {
       if (!force && Date.now() - lastRefresh.current < 15_000) return;
@@ -123,45 +131,59 @@ export function GuestProvider({ menu, children }: { menu: GuestMenu; children: R
       void refreshRecentOrders();
     };
 
-    const channel = supabase
-      .channel(`menu:${menu.cafe.id}`)
-      .on<ItemRow>("postgres_changes", { event: "UPDATE", schema: "public", table: "menu_items", filter: `cafe_id=eq.${menu.cafe.id}` }, ({ new: row }) => {
-        setItems((current) =>
-          current.map((item) =>
-            item.id === row.id
-              ? {
-                  ...item,
-                  pricePaise: row.price_paise,
-                  isAvailable: row.is_available && row.is_visible && !row.archived_at,
-                  soldOutUntil: row.sold_out_until,
-                }
-              : item,
-          ),
-        );
-      })
-      .on<OptionRow>("postgres_changes", { event: "UPDATE", schema: "public", table: "options", filter: `cafe_id=eq.${menu.cafe.id}` }, ({ new: row }) => {
-        setItems((current) =>
-          current.map((item) => ({
-            ...item,
-            groups: item.groups.map((group) => ({
-              ...group,
-              options: group.options.map((o) => (o.id === row.id ? { ...o, available: row.is_available, priceDeltaPaise: row.price_delta_paise } : o)),
-            })),
-          })),
-        );
-      })
-      .subscribe((status) => {
-        if (status !== "SUBSCRIBED") return;
-        // A second SUBSCRIBED means we reconnected and may have missed changes.
-        if (subscribedBefore) refresh(true);
-        subscribedBefore = true;
-      });
+    const unsubscribe = subscribeWhenReady((client) =>
+      client
+        .channel(cafeChannel(menu.cafe.id))
+        // The counter paused or resumed ordering: reload the cafe status.
+        .on("broadcast", { event: CAFE_STATUS_EVENT }, () => refresh(true))
+        .on<ItemRow>(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "menu_items", filter: `cafe_id=eq.${menu.cafe.id}` },
+          ({ new: row }) => {
+            setItems((current) =>
+              current.map((item) =>
+                item.id === row.id
+                  ? {
+                      ...item,
+                      pricePaise: row.price_paise,
+                      isAvailable: row.is_available && row.is_visible && !row.archived_at,
+                      soldOutUntil: row.sold_out_until,
+                    }
+                  : item,
+              ),
+            );
+          },
+        )
+        .on<OptionRow>(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "options", filter: `cafe_id=eq.${menu.cafe.id}` },
+          ({ new: row }) => {
+            setItems((current) =>
+              current.map((item) => ({
+                ...item,
+                groups: item.groups.map((group) => ({
+                  ...group,
+                  options: group.options.map((o) =>
+                    o.id === row.id ? { ...o, available: row.is_available, priceDeltaPaise: row.price_delta_paise } : o,
+                  ),
+                })),
+              })),
+            );
+          },
+        )
+        .subscribe((status) => {
+          if (status !== "SUBSCRIBED") return;
+          // A second SUBSCRIBED means we reconnected and may have missed changes.
+          if (subscribedBefore) refresh(true);
+          subscribedBefore = true;
+        }),
+    );
 
     const onVisible = () => document.visibilityState === "visible" && refresh();
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
-      void supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [menu.cafe.id, refreshRecentOrders, router]);
 

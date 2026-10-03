@@ -6,9 +6,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { formatINR } from "@/lib/money";
 import type { OrderStatus } from "@/lib/order-state";
-import { getBrowserClient } from "@/lib/supabase/browser";
+import { getBrowserClient, subscribeWhenReady } from "@/lib/supabase/browser";
 
 import { useGuest } from "./guest-provider";
+import { ServiceButtons } from "./service-buttons";
 
 interface TrackedOrder {
   id: string;
@@ -93,24 +94,27 @@ export function OrderTracker({ orderId }: { orderId: string }) {
   useEffect(() => {
     let active = true;
     void fetchOrder(orderId).then((data) => active && apply(data));
-    const supabase = getBrowserClient();
     let subscribedBefore = false;
-    const channel = supabase
-      .channel(`order:${orderId}`)
-      .on<Partial<TrackedOrder>>("postgres_changes", { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${orderId}` }, ({ new: row }) =>
-        setOrder((current) => (current ? { ...current, ...row, order_items: current.order_items } : current)),
-      )
-      .subscribe((status) => {
-        if (status !== "SUBSCRIBED") return;
-        if (subscribedBefore) void load(); // reconnected: catch up on anything missed [D-26]
-        subscribedBefore = true;
-      });
+    const unsubscribe = subscribeWhenReady((supabase) =>
+      supabase
+        .channel(`order:${orderId}`)
+        .on<Partial<TrackedOrder>>(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${orderId}` },
+          ({ new: row }) => setOrder((current) => (current ? { ...current, ...row, order_items: current.order_items } : current)),
+        )
+        .subscribe((status) => {
+          if (status !== "SUBSCRIBED") return;
+          if (subscribedBefore) void load(); // reconnected: catch up on anything missed [D-26]
+          subscribedBefore = true;
+        }),
+    );
     const onVisible = () => document.visibilityState === "visible" && void load();
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       active = false;
       document.removeEventListener("visibilitychange", onVisible);
-      void supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [orderId, load, apply]);
 
@@ -154,7 +158,11 @@ export function OrderTracker({ orderId }: { orderId: string }) {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 px-4 pt-4 pb-12">
       <header className="flex items-center gap-3">
-        <Link href={basePath} aria-label="Back to menu" className="grid size-10 place-items-center rounded-full transition-colors hover:bg-[var(--g-soft)] active:scale-90">
+        <Link
+          href={basePath}
+          aria-label="Back to menu"
+          className="grid size-10 place-items-center rounded-full transition-colors hover:bg-[var(--g-soft)] active:scale-90"
+        >
           <ArrowLeft className="size-5" />
         </Link>
         <p className="text-sm text-[var(--g-muted)]">
@@ -183,7 +191,9 @@ export function OrderTracker({ orderId }: { orderId: string }) {
                     <span
                       key={`${step.status}-${done}`}
                       className={`grid size-6 place-items-center rounded-full border-2 transition-colors duration-300 ${
-                        done ? "anim-pop border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-fg)]" : "border-[var(--g-line)] bg-[var(--g-surface)]"
+                        done
+                          ? "anim-pop border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-fg)]"
+                          : "border-[var(--g-line)] bg-[var(--g-surface)]"
                       } ${current && order.status !== "served" && order.status !== "completed" ? "anim-ring-pulse" : ""}`}
                     >
                       {done && <Check className="size-3.5" strokeWidth={3} />}
@@ -197,7 +207,9 @@ export function OrderTracker({ orderId }: { orderId: string }) {
                       </span>
                     )}
                   </div>
-                  <span className={`text-sm leading-6 transition-colors duration-300 ${current ? "font-semibold" : done ? "" : "text-[var(--g-muted)]"}`}>
+                  <span
+                    className={`text-sm leading-6 transition-colors duration-300 ${current ? "font-semibold" : done ? "" : "text-[var(--g-muted)]"}`}
+                  >
                     {step.label}
                   </span>
                 </li>
@@ -207,7 +219,11 @@ export function OrderTracker({ orderId }: { orderId: string }) {
         )}
       </section>
 
-      <section aria-label="Items" style={{ "--i": 3 } as React.CSSProperties} className="anim-rise rounded-2xl bg-[var(--g-surface)] p-5 text-sm ring-1 ring-[var(--g-line)]">
+      <section
+        aria-label="Items"
+        style={{ "--i": 3 } as React.CSSProperties}
+        className="anim-rise rounded-2xl bg-[var(--g-surface)] p-5 text-sm ring-1 ring-[var(--g-line)]"
+      >
         <ul className="flex flex-col gap-3">
           {activeItems.map((item) => (
             <li key={item.id} className="flex gap-3">
@@ -248,6 +264,7 @@ export function OrderTracker({ orderId }: { orderId: string }) {
       </section>
 
       <div className="anim-rise flex flex-col gap-2" style={{ "--i": 5 } as React.CSSProperties}>
+        {!stopped && <ServiceButtons />}
         <Link
           href={basePath}
           className="flex h-12 items-center justify-center rounded-xl bg-[var(--brand)] font-semibold text-[var(--brand-fg)] transition-transform active:scale-[0.98]"
@@ -280,7 +297,16 @@ export function OrderTracker({ orderId }: { orderId: string }) {
 function SentTick() {
   return (
     <div className="anim-pop mb-3 grid size-14 place-items-center rounded-full bg-[color-mix(in_srgb,var(--brand)_14%,transparent)]">
-      <svg viewBox="0 0 24 24" className="size-8" fill="none" stroke="var(--brand)" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <svg
+        viewBox="0 0 24 24"
+        className="size-8"
+        fill="none"
+        stroke="var(--brand)"
+        strokeWidth={2.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
         <path d="M5 12.5l4.5 4.5L19 7.5" className="anim-draw" style={{ "--len": 24 } as React.CSSProperties} />
       </svg>
     </div>

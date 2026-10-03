@@ -4,7 +4,7 @@ import { cache } from "react";
 
 import { publicEnv } from "@/lib/env";
 import { isOpenAt, type OpeningHours } from "@/lib/hours";
-import type { Diet, GuestMenu, MenuItem } from "@/lib/menu-types";
+import type { Diet, GuestMenu, MenuCategory, MenuItem } from "@/lib/menu-types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TABLE_TOKEN_PATTERN } from "@/lib/tokens";
 
@@ -62,32 +62,16 @@ interface ItemRow {
 }
 
 /**
- * Everything a guest page needs for one QR table, or null if the token is unknown.
- * Read with the service role because guests can't read tables or cafes directly [D-06].
- * Cached per request so the layout and the order API share one lookup.
+ * The orderable menu of a cafe: visible, non-archived categories and items with their
+ * option groups. Shared by guest pages and staff ordering. Cached per request.
  */
-export const getGuestMenu = cache(async (token: string): Promise<GuestMenu | null> => {
-  if (!TABLE_TOKEN_PATTERN.test(token)) return null;
+export const getMenuItems = cache(async (cafeId: string): Promise<{ categories: MenuCategory[]; items: MenuItem[] }> => {
   const supabase = createAdminClient();
-
-  const { data: table, error: tableError } = await supabase
-    .from("tables")
-    .select(
-      "id, label, token, is_active, archived_at, cafes!inner(id, slug, name, logo_path, brand_color, timezone, " +
-        "gst_mode, tax_rate_bp, prices_include_tax, allow_pay_at_counter, ordering_paused, pause_message, " +
-        "opening_hours, status, is_demo)",
-    )
-    .eq("token", token)
-    .maybeSingle<TableRow>();
-  if (tableError) throw tableError;
-  if (!table) return null;
-  const cafe = table.cafes;
-
   const [categories, items] = await Promise.all([
     supabase
       .from("categories")
       .select("id, name")
-      .eq("cafe_id", cafe.id)
+      .eq("cafe_id", cafeId)
       .eq("is_visible", true)
       .is("archived_at", null)
       .order("sort"),
@@ -97,7 +81,7 @@ export const getGuestMenu = cache(async (token: string): Promise<GuestMenu | nul
         "id, category_id, name, description, price_paise, image_path, diet, tags, is_available, sold_out_until, " +
           "option_groups(id, name, min_select, max_select, sort, options(id, name, price_delta_paise, is_available, sort))",
       )
-      .eq("cafe_id", cafe.id)
+      .eq("cafe_id", cafeId)
       .eq("is_visible", true)
       .is("archived_at", null)
       .order("sort")
@@ -133,6 +117,33 @@ export const getGuestMenu = cache(async (token: string): Promise<GuestMenu | nul
         })),
     }));
 
+  return { categories: categories.data, items: menuItems };
+});
+
+/**
+ * Everything a guest page needs for one QR table, or null if the token is unknown.
+ * Read with the service role because guests can't read tables or cafes directly [D-06].
+ * Cached per request so the layout and the order API share one lookup.
+ */
+export const getGuestMenu = cache(async (token: string): Promise<GuestMenu | null> => {
+  if (!TABLE_TOKEN_PATTERN.test(token)) return null;
+  const supabase = createAdminClient();
+
+  const { data: table, error: tableError } = await supabase
+    .from("tables")
+    .select(
+      "id, label, token, is_active, archived_at, cafes!inner(id, slug, name, logo_path, brand_color, timezone, " +
+        "gst_mode, tax_rate_bp, prices_include_tax, allow_pay_at_counter, ordering_paused, pause_message, " +
+        "opening_hours, status, is_demo)",
+    )
+    .eq("token", token)
+    .maybeSingle<TableRow>();
+  if (tableError) throw tableError;
+  if (!table) return null;
+  const cafe = table.cafes;
+
+  const { categories, items: menuItems } = await getMenuItems(cafe.id);
+
   return {
     cafe: {
       id: cafe.id,
@@ -152,7 +163,7 @@ export const getGuestMenu = cache(async (token: string): Promise<GuestMenu | nul
       isDemo: cafe.is_demo,
     },
     table: { id: table.id, label: table.label, token: table.token, isActive: table.is_active && !table.archived_at },
-    categories: categories.data,
+    categories,
     items: menuItems,
   };
 });

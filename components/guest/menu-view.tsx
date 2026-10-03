@@ -13,12 +13,14 @@ import { DietMark } from "./diet-mark";
 import { useGuest } from "./guest-provider";
 import { ItemSheet } from "./item-sheet";
 import { QtyStepper } from "./qty-stepper";
+import { ServiceButtons } from "./service-buttons";
 
 const TAG_LABEL: Record<string, string> = { spicy: "Spicy", new: "New", bestseller: "Bestseller", jain: "Jain" };
 
 export function MenuView() {
   const { cafe, table, categories, items, basePath, recentOrders } = useGuest();
   const lines = useCart((s) => s.lines);
+  const addToCart = useCart((s) => s.add);
   const [query, setQuery] = useState("");
   const [vegOnly, setVegOnly] = useState(false);
   const [openItem, setOpenItem] = useState<MenuItem | null>(null);
@@ -112,6 +114,12 @@ export function MenuView() {
           </span>
           <ChevronRight className="size-4 text-[var(--g-muted)]" />
         </Link>
+      )}
+
+      {table.isActive && cafe.status !== "suspended" && (
+        <div className="anim-rise mx-4 mb-3" style={{ "--i": 1 } as React.CSSProperties}>
+          <ServiceButtons />
+        </div>
       )}
 
       {blocked && (
@@ -210,7 +218,7 @@ export function MenuView() {
         </div>
       )}
 
-      {openItem && <ItemSheet item={openItem} onClose={() => setOpenItem(null)} />}
+      {openItem && <ItemSheet item={openItem} onClose={() => setOpenItem(null)} onAdd={addToCart} />}
     </main>
   );
 }
