@@ -49,7 +49,7 @@ export const getStaffSession = cache(async (cafeId: string): Promise<StaffSessio
 
 /** Where each role lands after signing in. */
 export function homeFor(role: StaffRole): string {
-  return role === "kitchen" ? "/kitchen" : "/staff";
+  return role === "kitchen" ? "/kitchen" : role === "owner" ? "/admin" : "/staff";
 }
 
 /**

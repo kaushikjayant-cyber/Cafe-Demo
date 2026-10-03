@@ -685,3 +685,20 @@ CSS-only animations (no library, keeping the customer JS budget), all in `app/gl
 **Bug found and fixed:** the bill showed "Counter" instead of the table, because guests can't read `tables` (it holds QR tokens). The label is now looked up on the server.
 
 **To switch the demo to real Razorpay (test mode):** set `DEMO_RAZORPAY_KEY_ID`, `DEMO_RAZORPAY_KEY_SECRET` and `DEMO_RAZORPAY_WEBHOOK_SECRET`, and add the webhook `https://<host>/api/webhooks/razorpay/<demo cafe id>` with events `payment.captured` and `payment.failed`. Real cafes' keys are entered in the owner's settings (Phase 4) and stored encrypted.
+
+### Phase 4: Owner admin (2026-10-03)
+**Done**
+- Owner panel `/c/[slug]/admin` (owner + manager; Staff and Settings owner-only): sidebar on desktop, slide-in menu on phones, print-friendly
+- **Dashboard**: today vs **the same time last week** (not the whole day), average bill, 7/30/90-day sales; daily sales column chart with hover tooltip and table view; best sellers and slow movers; busiest-hours heatmap (weekday × hour, sequential ramp); payment mix; sales by table. One SQL call (`admin_dashboard`), computed in the cafe's timezone and business day, excluding cancelled/rejected/expired/unpaid-online orders and subtracting refunds. Chart colours validated for colour-blindness with the dataviz checker.
+- **Orders & bills**: date range, status filters, search by order number or invoice, paging, bill view with timeline, payments and refunds; **CSV export for GST** (taxable value, CGST, SGST, round off, refunds; paged past the 1,000-row API cap; formula-injection safe; UTF-8 BOM for Excel)
+- **Menu**: categories (add, rename, reorder, hide, delete-if-empty); items (name, description, price, category, diet, labels, visibility); option groups with presets; photos re-encoded to WebP (1200 px, a few KB); remove keeps history. `save_menu_item` saves the item and options atomically, keeps option ids so open carts still work, and audits price changes.
+- **Tables & QR**: add, bulk-add numbered tables, rename, pause, replace a misused QR (old code 404s immediately), remove; printable A6 QR cards (4 per A4); warning when codes point at a temporary address (R21)
+- **Staff** (owner): create username logins, reset passwords, change roles, turn logins off (staff row inactive + auth ban, effective immediately); can't lock out the owner
+- **Settings** (owner): brand name, colour with a live contrast check, logo; legal name, address, GSTIN, FSSAI, invoice prefix, GST registered/not, rate, inclusive/exclusive; opening hours (closed days, past-midnight), business-day start, accept mode, pay at counter, Google review link; **Razorpay keys** encrypted at rest, write-only, masked, with the webhook URL to copy
+- Demo cafe: **60 days of realistic order history** (`generate_demo_history`, ~5,400 orders: weekday/weekend volume, lunch/evening peaks, popular and slow items, payment mix, today up to now), loaded by `supabase db reset`
+- Owners now land on the dashboard after signing in
+- **145 tests** (+16)
+
+**Bugs found and fixed:** `is_service_role()` raised on empty JWT claims instead of returning false; dashboard compared a partial today with a whole day last week; generated orders had numbers out of time order; CSV taxable value was wrong for tax-exclusive cafes, would have stopped at 1,000 rows, and would have turned negative round-offs into text; audit log writes need the service role (users can only read it); opening hours schema demanded all seven days.
+
+**Verified in the browser:** dashboard figures and charts; orders list, filters, search, 2,734-row CSV; created an item with a Size group, uploaded a photo (1600×1200 JPEG → 1200×900 WebP, 7 KB), changed its price (audited) and options (ids kept), saw it on the guest menu; added "Patio 1" (duplicate refused), replaced T1's QR (old link 404), print cards; created staff "ravi" (duplicate refused), signed in, turned off → sign-in refused; invalid GSTIN refused; closed today → guest menu shows "closed"; saved Razorpay keys (encrypted, masked, never returned to the page) and disconnected.
