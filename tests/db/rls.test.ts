@@ -236,6 +236,17 @@ describe("menu", () => {
   });
 });
 
+describe("schema shape", () => {
+  it("has one foreign key per table pair, so Supabase API embeds are unambiguous (PGRST201)", async () => {
+    const { rows } = await db.query<{ pair: string }>(`
+      select conrelid::regclass || ' -> ' || confrelid::regclass as pair
+      from pg_constraint where contype = 'f' and connamespace = 'public'::regnamespace
+      group by 1 having count(*) > 1 order by 1`);
+    // item_pairings legitimately points at two different menu items.
+    expect(rows.map((r) => r.pair)).toEqual(["item_pairings -> menu_items"]);
+  });
+});
+
 describe("internal functions", () => {
   it("browser roles cannot call the counters or the expiry job", async () => {
     for (const sql of [

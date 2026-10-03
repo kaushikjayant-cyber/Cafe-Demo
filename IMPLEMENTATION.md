@@ -619,3 +619,31 @@ Jobs run with **pg_cron** inside Supabase, except backups (GitHub Action). [D-40
 - Local development uses **Supabase in Docker** (`npx supabase start`). All migrations and the seed apply cleanly on real Supabase Postgres, including pg_cron and the realtime publication. `npm run dev` reads `.env.development.local` (local stack); `.env.local` holds the cloud project.
 - ✅ Phase 0 exit check met: `/c/demo` renders "Brew & Bloom" from the database. RLS verified against real Supabase as well: a guest gets 36 menu items, 0 cafes, 0 table tokens, 0 secrets, and is blocked from the counters.
 - Cloud project: keys verified. Schema push waits for `SUPABASE_ACCESS_TOKEN`; anonymous sign-ins still need switching on in the dashboard.
+
+### Phase 1: Guest ordering (2026-10-03)
+**Done**
+- `/t/[token]`: menu with sticky category tabs (scroll-spy), search, veg filter, Indian veg/non-veg marks, tags, sold-out state, "Customisable" hint, and an in-progress order banner
+- Item sheet: option groups (radio/checkbox with min/max), required-choice defaults, per-item note, quantity, live price
+- Cart (`zustand`, persisted, hydrated after mount): per-cafe, moves with the guest across tables, expires after 6 h, keeps the idempotency key across retries
+- `/t/[token]/cart`: live price/sold-out reconciliation, typed 409 handling, GST-correct bill preview, optional guest name and kitchen note, pay at counter
+- `POST /api/orders`: same-origin check, anonymous session required, Zod strict schema, server-side pricing (`lib/orders/validate.ts`), opening hours / pause / suspension / inactive table checks, rate limits, idempotency (retries don't count towards limits), atomic `place_order` RPC
+- `/t/[token]/order/[id]`: live tracking via Realtime with reconnect catch-up, cancel while `placed` (`POST /api/orders/[id]/cancel`, CAS-protected)
+- Live menu: Realtime updates for stock and price, full refresh on reconnect or tab focus
+- Friendly error page for guest routes when the database is unreachable
+- **97 tests** (+25): cart pricing rejections, schema strictness, opening hours across midnight, contrast, rate limiter, `place_order` atomicity, idempotency and permissions, FK-ambiguity guard
+
+**Verified in the browser (local Supabase)**: customised order → Order #1 → status changes pushed live to the guest; sold-out pushed live to an open menu; API rejects sold-out items, tampered prices, client-sent totals, unknown tables, cross-site and session-less requests; duplicate submit returns the same order; rate limit after 5 orders/10 min; cancel refused once the kitchen has started.
+
+**Changes from the spec**
+- Migration `…006` drops the single-column FKs that duplicated the composite cross-tenant FKs (they made Supabase API embeds ambiguous, PGRST201). A test guards against reintroducing them.
+- Guests are signed in anonymously **only when they place their first order**, not when they open the menu, so browsing creates no auth users.
+- "Ordering paused" reaches guests on page focus/refresh and is enforced by the API; push-based updates come with the counter panel (Phase 2).
+
+### Motion pass (2026-10-03)
+CSS-only animations (no library, keeping the customer JS budget), all in `app/globals.css` under "Motion", all switched off for `prefers-reduced-motion`. Entry animations use `backwards` fill, so nothing stays hidden or overrides state styles (e.g. sold-out dimming) once they finish.
+- Item sheet slides up/down with a fading backdrop (unmounts after the exit animation)
+- Menu rows rise in with a 35 ms stagger (first 12); category highlight is one pill that slides between tabs (positioned from the DOM, no re-renders)
+- Cart bar slides up; item count pops on change; ADD pops into the stepper; press feedback on buttons
+- Cart page slides in from the right; removed lines slide out; total pops when it changes; spinner while placing
+- Tracker: self-drawing tick for a just-placed order, status headline cross-fades, reached steps pop, connector lines fill, current step pulses
+- Toasts slide down from the top

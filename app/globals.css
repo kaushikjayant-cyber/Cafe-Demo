@@ -9,7 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -128,3 +128,73 @@
     @apply font-sans;
   }
 }
+/* Guest (customer) pages: light, warm-neutral ground so food photos read well [D-39].
+   --brand / --brand-fg are set per cafe on the guest layout. */
+.guest {
+  --g-bg: #f8f7f4;
+  --g-surface: #ffffff;
+  --g-ink: #1c1b18;
+  --g-muted: #686660;
+  --g-line: #e7e4dd;
+  --g-soft: #f0eee9;
+  --g-veg: #1e8e3e;
+  --g-nonveg: #a5281d;
+  --g-egg: #c27803;
+  --g-danger: #b42318;
+  color-scheme: light;
+  background: var(--g-bg);
+  color: var(--g-ink);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Motion -------------------------------------------------------------------------
+   Short, purposeful animations for guest pages. Every element is fully visible at rest;
+   animations only play on entry/change. All of it switches off for reduced motion. */
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes sheet-down { from { transform: translateY(0); } to { transform: translateY(100%); } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes slide-in-right { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes slide-out-left { to { opacity: 0; transform: translateX(-32px); } }
+@keyframes bar-up { from { opacity: 0; transform: translateY(120%); } to { opacity: 1; transform: none; } }
+@keyframes bump { 0% { transform: scale(1); } 35% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes toast-down { from { opacity: 0; transform: translateY(-16px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes ring-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand) 45%, transparent); }
+  70% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--brand) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand) 0%, transparent); }
+}
+@keyframes draw { from { stroke-dashoffset: var(--len, 60); } to { stroke-dashoffset: 0; } }
+
+.anim-sheet-up { animation: sheet-up 280ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+.anim-sheet-down { animation: sheet-down 200ms cubic-bezier(0.4, 0, 1, 1) both; }
+.anim-fade-in { animation: fade-in 220ms ease-out backwards; }
+.anim-fade-out { animation: fade-out 200ms ease-in both; }
+.anim-rise { animation: rise 360ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; animation-delay: calc(var(--i, 0) * 35ms); }
+.anim-slide-in-right { animation: slide-in-right 300ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.anim-slide-out-left { animation: slide-out-left 200ms ease-in both; }
+.anim-bar-up { animation: bar-up 340ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+.anim-bump { animation: bump 300ms ease-out; }
+.anim-pop { animation: pop 320ms cubic-bezier(0.2, 0.9, 0.3, 1.3) backwards; }
+.anim-toast { animation: toast-down 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.anim-ring-pulse { animation: ring-pulse 1.8s ease-out infinite; }
+.anim-draw { stroke-dasharray: var(--len, 60); animation: draw 520ms 120ms ease-out both; }
+.ease-spring { transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-sheet-up, .anim-sheet-down, .anim-fade-in, .anim-fade-out, .anim-rise, .anim-slide-in-right,
+  .anim-slide-out-left, .anim-bar-up, .anim-bump, .anim-pop, .anim-toast, .anim-ring-pulse, .anim-draw {
+    animation: none !important;
+  }
+  .guest * { transition-duration: 0ms !important; scroll-behavior: auto !important; }
+}
+
+html:has(.guest) { scroll-behavior: smooth; }
