@@ -45,6 +45,9 @@ export function isTerminal(status: OrderStatus): boolean {
   return COUNTER_TRANSITIONS[status].length === 0;
 }
 
+/** Statuses an order can be cancelled from (still being made). */
+export const CANCELLABLE: OrderStatus[] = ["placed", "accepted", "preparing"];
+
 /** Orders the counter board still needs to act on. */
 export function isActive(status: OrderStatus): boolean {
   return status === "placed" || status === "accepted" || status === "preparing" || status === "ready";

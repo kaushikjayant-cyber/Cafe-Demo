@@ -48,6 +48,8 @@ export interface GuestCafe {
   taxRateBp: number;
   pricesIncludeTax: boolean;
   allowPayAtCounter: boolean;
+  /** A payment gateway is set up (or simulated for the demo). */
+  onlinePayments: boolean;
   orderingPaused: boolean;
   pauseMessage: string | null;
   isOpen: boolean;

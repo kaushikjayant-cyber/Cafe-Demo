@@ -23,16 +23,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ code: "TABLE_NOT_FOUND", message: "Please ask a member of staff." }, { status: 404 });
   }
 
+  const customerUid = await currentUserId();
+  const admin = createAdminClient();
+
+  // A bill only makes sense once this guest has ordered at this table (in the last 12 h).
+  if (parsed.data.type === "bill") {
+    const { data: order } = customerUid
+      ? await admin
+          .from("orders")
+          .select("id")
+          .eq("table_id", menu.table.id)
+          .eq("customer_uid", customerUid)
+          .not("status", "in", "(cancelled,rejected,expired)")
+          .gte("created_at", new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString())
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
+    if (!order) {
+      return NextResponse.json({ code: "NO_ORDER", message: "There's nothing to bill yet. Place an order first." }, { status: 409 });
+    }
+  }
+
   // One of each kind per table every two minutes: a second tap just reassures the guest.
   if (!rateLimiter.allow(`service:${menu.table.id}:${parsed.data.type}`, LIMITS.serviceRequestPerTable)) {
     return NextResponse.json({ ok: true, duplicate: true });
   }
 
-  const { error } = await createAdminClient().from("service_requests").insert({
+  const { error } = await admin.from("service_requests").insert({
     cafe_id: menu.cafe.id,
     table_id: menu.table.id,
     type: parsed.data.type,
-    customer_uid: await currentUserId(),
+    customer_uid: customerUid,
   });
   if (error) throw error;
   return NextResponse.json({ ok: true, duplicate: false }, { status: 201 });

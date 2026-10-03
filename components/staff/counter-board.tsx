@@ -3,6 +3,7 @@
 import { BellRing, Check, ReceiptText } from "lucide-react";
 import { useCallback, useState } from "react";
 
+import { formatINR } from "@/lib/money";
 import type { OrderStatus, StaffRole } from "@/lib/order-state";
 import { getBrowserClient } from "@/lib/supabase/browser";
 
@@ -79,6 +80,41 @@ function Board({ tenantKey, base, cafe, staff }: Props) {
     [patchOrder, fail, toast],
   );
 
+  const handled = useCallback(
+    async (order: BoardOrder) => {
+      setBusyId(order.id);
+      const { error } = await getBrowserClient().rpc("clear_order_attention", { p_order: order.id });
+      if (error) fail(error.message);
+      else patchOrder(order.id, { needs_attention: false });
+      setBusyId(null);
+    },
+    [patchOrder, fail],
+  );
+
+  const refund = useCallback(
+    async (order: BoardOrder) => {
+      setBusyId(order.id);
+      try {
+        const response = await fetch("/api/staff/refunds", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: order.id, reason: "Refunded at the counter" }),
+        });
+        const body = await response.json();
+        if (!response.ok) toast.show(body.message ?? "The refund didn't go through. Please try again.");
+        else {
+          toast.show(`Refunded ${formatINR(body.refundedPaise)} for order #${order.daily_no}.`);
+          void reload();
+        }
+      } catch {
+        toast.show("No connection. The refund wasn't sent.");
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [reload, toast],
+  );
+
   const resolve = useCallback(
     async (request: ServiceRequest) => {
       dropRequest(request.id);
@@ -153,7 +189,17 @@ function Board({ tenantKey, base, cafe, staff }: Props) {
                   <p className="px-1 py-6 text-center text-sm text-[var(--g-muted)]">{column.empty}</p>
                 ) : (
                   columnOrders.map((order) => (
-                    <OrderCard key={order.id} order={order} now={now} busy={busyId === order.id} onTransition={transition} onPay={pay} />
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      now={now}
+                      busy={busyId === order.id}
+                      onTransition={transition}
+                      onPay={pay}
+                      canRefund={staff.role === "owner" || staff.role === "manager"}
+                      onRefund={refund}
+                      onHandled={handled}
+                    />
                   ))
                 )}
               </section>

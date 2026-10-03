@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import { publicEnv } from "@/lib/env";
 import { isOpenAt, type OpeningHours } from "@/lib/hours";
+import { onlinePaymentsAvailable } from "@/lib/payments/gateway";
 import type { Diet, GuestMenu, MenuCategory, MenuItem } from "@/lib/menu-types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TABLE_TOKEN_PATTERN } from "@/lib/tokens";
@@ -142,7 +143,7 @@ export const getGuestMenu = cache(async (token: string): Promise<GuestMenu | nul
   if (!table) return null;
   const cafe = table.cafes;
 
-  const { categories, items: menuItems } = await getMenuItems(cafe.id);
+  const [{ categories, items: menuItems }, onlinePayments] = await Promise.all([getMenuItems(cafe.id), onlinePaymentsAvailable(cafe.id)]);
 
   return {
     cafe: {
@@ -156,6 +157,7 @@ export const getGuestMenu = cache(async (token: string): Promise<GuestMenu | nul
       taxRateBp: cafe.tax_rate_bp,
       pricesIncludeTax: cafe.prices_include_tax,
       allowPayAtCounter: cafe.allow_pay_at_counter,
+      onlinePayments,
       orderingPaused: cafe.ordering_paused,
       pauseMessage: cafe.pause_message,
       isOpen: isOpenAt(cafe.opening_hours, new Date(), cafe.timezone),

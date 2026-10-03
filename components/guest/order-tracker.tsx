@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, LoaderCircle, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -10,12 +10,16 @@ import { getBrowserClient, subscribeWhenReady } from "@/lib/supabase/browser";
 
 import { useGuest } from "./guest-provider";
 import { ServiceButtons } from "./service-buttons";
+import { SimulatedCheckout } from "./simulated-checkout";
+import { usePayment } from "./use-payment";
 
 interface TrackedOrder {
   id: string;
   daily_no: number;
   status: OrderStatus;
   payment_status: string;
+  payment_method: string | null;
+  invoice_no: string | null;
   guest_name: string | null;
   note: string | null;
   cancel_reason: string | null;
@@ -48,7 +52,7 @@ const STEPS: { status: OrderStatus; label: string }[] = [
 const STEP_INDEX: Partial<Record<OrderStatus, number>> = { placed: 0, accepted: 1, preparing: 2, ready: 3, served: 4, completed: 4 };
 
 const HEADLINE: Record<OrderStatus, string> = {
-  pending_payment: "Waiting for payment",
+  pending_payment: "Complete payment to send your order",
   placed: "Waiting for the cafe to confirm",
   accepted: "Confirmed! The kitchen will start soon",
   preparing: "Your order is being prepared",
@@ -62,7 +66,7 @@ const HEADLINE: Record<OrderStatus, string> = {
 
 const SELECT =
   "id, daily_no, status, payment_status, guest_name, note, cancel_reason, subtotal_paise, tax_paise, round_off_paise, " +
-  "total_paise, gst_mode, prices_include_tax, tax_rate_bp, created_at, " +
+  "total_paise, gst_mode, prices_include_tax, tax_rate_bp, created_at, payment_method, invoice_no, " +
   "order_items(id, name_snapshot, qty, line_total_paise, options_snapshot, note, status)";
 
 async function fetchOrder(orderId: string): Promise<TrackedOrder | null> {
@@ -70,8 +74,8 @@ async function fetchOrder(orderId: string): Promise<TrackedOrder | null> {
   return data;
 }
 
-export function OrderTracker({ orderId }: { orderId: string }) {
-  const { cafe, table, basePath, refreshRecentOrders } = useGuest();
+export function OrderTracker({ orderId, autoPay = false }: { orderId: string; autoPay?: boolean }) {
+  const { cafe, table, basePath, refreshRecentOrders, ensureSession, showNotice } = useGuest();
   const [order, setOrder] = useState<TrackedOrder | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "missing">("loading");
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -90,6 +94,39 @@ export function OrderTracker({ orderId }: { orderId: string }) {
     setState(data ? "ready" : "missing");
   }, []);
   const load = useCallback(async () => apply(await fetchOrder(orderId)), [apply, orderId]);
+
+  const payment = usePayment({
+    cafeName: cafe.name,
+    brandColor: cafe.brandColor,
+    ensureSession,
+    onSettled: (message) => {
+      showNotice(message);
+      void load();
+      void refreshRecentOrders();
+    },
+  });
+  const [counterSwitch, setCounterSwitch] = useState<"idle" | "busy">("idle");
+
+  // Coming straight from "Place order & pay": open checkout once, then forget the flag.
+  const autoPayDone = useRef(false);
+  useEffect(() => {
+    if (!autoPay || autoPayDone.current || order?.status !== "pending_payment") return;
+    autoPayDone.current = true;
+    window.history.replaceState(null, "", window.location.pathname);
+    void payment.pay(orderId);
+  }, [autoPay, order?.status, orderId, payment]);
+
+  async function payAtCounter() {
+    setCounterSwitch("busy");
+    try {
+      const response = await fetch(`/api/orders/${orderId}/pay-at-counter`, { method: "POST" });
+      if (!response.ok) showNotice((await response.json()).message ?? "That didn't work. Please ask a member of staff.");
+      await load();
+      void refreshRecentOrders();
+    } finally {
+      setCounterSwitch("idle");
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -180,6 +217,28 @@ export function OrderTracker({ orderId }: { orderId: string }) {
           <p className="mt-1 text-sm text-[var(--g-muted)]">Reason: {order.cancel_reason}</p>
         )}
 
+        {order.status === "pending_payment" && (
+          <div className="anim-rise mt-4 flex flex-col gap-2">
+            <p className="text-sm text-[var(--g-muted)]">Your order goes to the kitchen as soon as it&apos;s paid. We&apos;ll hold it for 15 minutes.</p>
+            <PayButton amountPaise={order.total_paise} phase={payment.phase} onPay={() => payment.pay(orderId)} />
+            {cafe.allowPayAtCounter && (
+              <button
+                type="button"
+                onClick={payAtCounter}
+                disabled={counterSwitch === "busy" || payment.phase !== "idle"}
+                className="h-11 rounded-xl text-sm font-medium text-[var(--g-muted)] ring-1 ring-[var(--g-line)] disabled:opacity-50"
+              >
+                {counterSwitch === "busy" ? "Sending to the counter…" : "Pay at the counter instead"}
+              </button>
+            )}
+          </div>
+        )}
+        {payment.error && (
+          <p role="alert" className="anim-rise mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">
+            {payment.error}
+          </p>
+        )}
+
         {!stopped && (
           <ol className="mt-5 flex flex-col gap-0">
             {STEPS.map((step, i) => {
@@ -259,12 +318,30 @@ export function OrderTracker({ orderId }: { orderId: string }) {
           {order.gst_mode === "regular" && order.prices_include_tax && (
             <p className="text-xs text-[var(--g-muted)]">Includes GST of {formatINR(order.tax_paise)}</p>
           )}
-          <p className="mt-2 text-[var(--g-muted)]">{order.payment_status === "paid" ? "Paid" : "Pay at the counter"}</p>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <p className={order.payment_status === "paid" ? "font-medium text-emerald-700" : "text-[var(--g-muted)]"}>
+              {order.payment_status === "paid"
+                ? `Paid${order.payment_method === "online" ? " online" : " at the counter"}`
+                : order.payment_status === "refunded"
+                  ? "Refunded"
+                  : order.status === "pending_payment"
+                    ? "Waiting for payment"
+                    : "Pay at the counter"}
+            </p>
+            {order.invoice_no && (
+              <Link href={`${basePath}/bill/${order.id}`} className="flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)]">
+                <ReceiptText className="size-4" /> View bill
+              </Link>
+            )}
+          </div>
         </div>
       </section>
 
       <div className="anim-rise flex flex-col gap-2" style={{ "--i": 5 } as React.CSSProperties}>
-        {!stopped && <ServiceButtons />}
+        {!stopped && order.payment_status === "unpaid" && cafe.onlinePayments && (
+          <PayButton amountPaise={order.total_paise} phase={payment.phase} onPay={() => payment.pay(orderId)} label="Pay now from your phone" />
+        )}
+        {!stopped && <ServiceButtons canRequestBill />}
         <Link
           href={basePath}
           className="flex h-12 items-center justify-center rounded-xl bg-[var(--brand)] font-semibold text-[var(--brand-fg)] transition-transform active:scale-[0.98]"
@@ -289,7 +366,32 @@ export function OrderTracker({ orderId }: { orderId: string }) {
           </p>
         )}
       </div>
+
+      {payment.simulated && (
+        <SimulatedCheckout
+          cafeName={cafe.name}
+          amountPaise={payment.simulated.amountPaise}
+          dailyNo={payment.simulated.dailyNo}
+          onOutcome={payment.simulate}
+          onCancel={payment.cancelSimulated}
+        />
+      )}
     </main>
+  );
+}
+
+function PayButton({ amountPaise, phase, onPay, label }: { amountPaise: number; phase: string; onPay: () => void; label?: string }) {
+  const busy = phase !== "idle";
+  return (
+    <button
+      type="button"
+      onClick={onPay}
+      disabled={busy}
+      className="flex h-12 items-center justify-center gap-2 rounded-xl bg-[var(--brand)] font-semibold text-[var(--brand-fg)] transition-transform active:scale-[0.98] disabled:opacity-60"
+    >
+      {busy && <LoaderCircle className="size-5 animate-spin" />}
+      {phase === "verifying" ? "Confirming payment…" : phase === "starting" ? "Opening payment…" : `${label ?? "Pay"} · ${formatINR(amountPaise)}`}
+    </button>
   );
 }
 

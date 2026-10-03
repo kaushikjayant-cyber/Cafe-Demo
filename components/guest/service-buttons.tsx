@@ -12,8 +12,8 @@ const DONE_MESSAGE: Record<Kind, string> = {
   bill: "We've asked for your bill. It's on its way.",
 };
 
-/** "Call waiter" and "Request bill" for the table (§5.8). */
-export function ServiceButtons() {
+/** "Call waiter", and "Request bill" once the guest has ordered (§5.8). */
+export function ServiceButtons({ canRequestBill }: { canRequestBill: boolean }) {
   const { table, showNotice } = useGuest();
   const [pending, setPending] = useState<Kind | null>(null);
   const [sent, setSent] = useState<Kind[]>([]);
@@ -26,7 +26,14 @@ export function ServiceButtons() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tableToken: table.token, type }),
       });
-      if (!response.ok) throw new Error();
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        if (body.code === "NO_ORDER") {
+          showNotice(body.message);
+          return;
+        }
+        throw new Error();
+      }
       showNotice(DONE_MESSAGE[type]);
       setSent((s) => [...s, type]);
       setTimeout(() => setSent((s) => s.filter((k) => k !== type)), 60_000);
@@ -57,7 +64,7 @@ export function ServiceButtons() {
   return (
     <div className="flex gap-2">
       {button("waiter", "Call waiter", BellRing)}
-      {button("bill", "Request bill", ReceiptText)}
+      {canRequestBill && button("bill", "Request bill", ReceiptText)}
     </div>
   );
 }

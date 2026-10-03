@@ -31,10 +31,14 @@ interface Props {
   busy: boolean;
   onTransition: (order: BoardOrder, to: OrderStatus, reason?: string) => void;
   onPay: (order: BoardOrder, method: PayMethod) => void;
+  /** Owners and managers can refund; others are asked to fetch one. */
+  canRefund: boolean;
+  onRefund: (order: BoardOrder) => void;
+  onHandled: (order: BoardOrder) => void;
 }
 
-export function OrderCard({ order, now, busy, onTransition, onPay }: Props) {
-  const [panel, setPanel] = useState<"none" | "reject" | "pay" | "cancel">("none");
+export function OrderCard({ order, now, busy, onTransition, onPay, canRefund, onRefund, onHandled }: Props) {
+  const [panel, setPanel] = useState<"none" | "reject" | "pay" | "cancel" | "refund">("none");
   const waiting = minutesSince(order.placed_at ?? order.created_at, now);
   const tone = ageTone(waiting);
   const isNew = now - new Date(order.created_at).getTime() < 15_000;
@@ -74,9 +78,35 @@ export function OrderCard({ order, now, busy, onTransition, onPay }: Props) {
         </header>
 
         {order.needs_attention && (
-          <p className="flex items-start gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-800">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0" /> Payment arrived after this order expired. Serve it or refund it.
-          </p>
+          <div className="flex flex-col gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-900 ring-1 ring-red-200">
+            <p className="flex items-start gap-2 font-medium">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              An online payment needs a decision: it arrived after the order timed out, or the guest paid twice.
+            </p>
+            {panel === "refund" ? (
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={busy} onClick={() => onRefund(order)} className="h-10 rounded-lg bg-red-700 px-3 font-semibold text-white disabled:opacity-50">
+                  Yes, refund the latest payment
+                </button>
+                <button type="button" onClick={() => setPanel("none")} className="h-10 rounded-lg px-3 ring-1 ring-red-200">
+                  Back
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={busy} onClick={() => onHandled(order)} className="h-10 rounded-lg bg-white px-3 font-semibold ring-1 ring-red-200 disabled:opacity-50">
+                  Keep it and serve
+                </button>
+                {canRefund ? (
+                  <button type="button" disabled={busy} onClick={() => setPanel("refund")} className="h-10 rounded-lg bg-white px-3 font-semibold text-red-700 ring-1 ring-red-200 disabled:opacity-50">
+                    Refund…
+                  </button>
+                ) : (
+                  <span className="self-center text-xs">A manager or owner can refund it.</span>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         <ul className="flex flex-col gap-1.5">

@@ -13,7 +13,12 @@ import { DietMark } from "./diet-mark";
 import { useGuest } from "./guest-provider";
 import { ItemSheet } from "./item-sheet";
 import { QtyStepper } from "./qty-stepper";
+import { LegalLinks } from "@/components/legal-page";
+
 import { ServiceButtons } from "./service-buttons";
+
+/** Orders that no longer need a bill. */
+const CLOSED = new Set(["cancelled", "rejected", "expired"]);
 
 const TAG_LABEL: Record<string, string> = { spicy: "Spicy", new: "New", bestseller: "Bestseller", jain: "Jain" };
 
@@ -118,7 +123,7 @@ export function MenuView() {
 
       {table.isActive && cafe.status !== "suspended" && (
         <div className="anim-rise mx-4 mb-3" style={{ "--i": 1 } as React.CSSProperties}>
-          <ServiceButtons />
+          <ServiceButtons canRequestBill={recentOrders.some((o) => !CLOSED.has(o.status))} />
         </div>
       )}
 
@@ -198,6 +203,8 @@ export function MenuView() {
           </ul>
         </section>
       ))}
+
+      <LegalLinks hrefFor={(page) => `${basePath}/legal/${page}`} />
 
       {count > 0 && !blocked && (
         <div className="anim-bar-up fixed inset-x-0 bottom-0 z-30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">

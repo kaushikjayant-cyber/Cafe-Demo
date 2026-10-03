@@ -209,3 +209,9 @@ html:has(.guest) { scroll-behavior: smooth; }
   --g-soft: #262b27;
   color-scheme: dark;
 }
+
+/* Bills print on plain paper. */
+@media print {
+  .guest { background: #fff !important; }
+  [aria-live] { display: none !important; }
+}

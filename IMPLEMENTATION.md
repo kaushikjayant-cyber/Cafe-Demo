@@ -668,3 +668,20 @@ CSS-only animations (no library, keeping the customer JS budget), all in `app/gl
 **Notes**
 - Background tabs are throttled by browsers; open menus catch up on focus (visibility refresh).
 - Kitchen sees orders after the counter accepts them (`accept_mode`); a "waiting for the counter" count is shown so nothing is invisible.
+
+### Phase 3: Payments & bills (2026-10-03)
+**Done**
+- Migration `…008_payments.sql`: `record_online_payment` (idempotent, so verify and webhook can both arrive; amount checked; a late payment reopens the order in New with `needs_attention`; a second payment flags the order), `record_payment_failure`, `record_refund` (state from the net amount kept, so refunding a double charge leaves the order paid), `clear_order_attention`, `cleanup_anonymous_users` (daily pg_cron, R32)
+- `lib/payments/`: gateway interface; Razorpay over REST; **simulated gateway** with the same HMAC contract (demo cafe or local development only; never offered to a real cafe in production); per-cafe gateway selection (own keys → demo env keys → simulated → none); `settleFromCheckout` (signature → fetch from gateway → order id + captured check → record); `handleWebhook`
+- APIs: `/api/payments/create` (amount from the DB, reuses an open attempt), `/api/payments/verify`, `/api/payments/simulate`, `/api/webhooks/razorpay/[cafeId]` (raw-body signature), `/api/orders/[id]/pay-at-counter`, `/api/staff/refunds` (owner/manager; refunds the latest charge; a fully refunded order still in progress is cancelled)
+- Guest: Pay now / Pay at counter choice; checkout opens straight after "Place order & pay"; simulated checkout sheet (success / declined / paid-then-closed-the-app); "Pay now from your phone" for unpaid orders; Razorpay Checkout loaded only when needed
+- **GST bill** `/t/[token]/bill/[id]`: Tax Invoice (taxable value, CGST/SGST, round off) or Bill of Supply; invoice number, cafe legal details, GSTIN, FSSAI; print / save as PDF
+- **Policy pages** for Razorpay KYC: Terms, Privacy (DPDP Act), Refunds & cancellations, Service & delivery, Contact at `/legal/*` on the cafe's own address and `/t/[token]/legal/*` from the menu; cafe home page with contact details and links
+- Board: flagged payments show "Keep it and serve" (any counter role) and "Refund…" (owner/manager)
+- **129 tests** (+19)
+
+**Verified in the browser:** pay online → auto-accepted, invoice issued, bill correct (₹220 = taxable ₹209.52 + CGST ₹5.24 + SGST ₹5.24); declined → switch to pay at counter; paid then closed the app → webhook completed it; forged signature rejected; retry reuses the gateway order; paying a paid order refused; late payment → back in New, flagged, guest told; double payment → flagged; owner refunded the extra ₹140 and the order stayed paid; kept and served the late one; all policy pages render, unknown page 404s.
+
+**Bug found and fixed:** the bill showed "Counter" instead of the table, because guests can't read `tables` (it holds QR tokens). The label is now looked up on the server.
+
+**To switch the demo to real Razorpay (test mode):** set `DEMO_RAZORPAY_KEY_ID`, `DEMO_RAZORPAY_KEY_SECRET` and `DEMO_RAZORPAY_WEBHOOK_SECRET`, and add the webhook `https://<host>/api/webhooks/razorpay/<demo cafe id>` with events `payment.captured` and `payment.failed`. Real cafes' keys are entered in the owner's settings (Phase 4) and stored encrypted.

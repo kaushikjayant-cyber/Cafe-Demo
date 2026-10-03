@@ -25,11 +25,10 @@ export async function placeGuestOrder(input: PlaceOrderInput, customerUid: strin
   const blocked = orderingBlockedReason(cafe, table);
   if (blocked) return { ok: false, status: 423, code: "ORDERING_CLOSED", message: blocked };
 
-  if (input.payChoice === "online") {
-    // Razorpay arrives in Phase 3.
-    return { ok: false, status: 422, code: "PAYMENT_UNAVAILABLE", message: "Online payment isn't available yet. Please pay at the counter." };
+  if (input.payChoice === "online" && !cafe.onlinePayments) {
+    return { ok: false, status: 422, code: "PAYMENT_UNAVAILABLE", message: "Online payment isn't available here. Please pay at the counter." };
   }
-  if (!cafe.allowPayAtCounter) {
+  if (input.payChoice === "counter" && !cafe.allowPayAtCounter) {
     return { ok: false, status: 422, code: "PAYMENT_UNAVAILABLE", message: "This cafe only accepts online payment." };
   }
 
@@ -73,7 +72,8 @@ export async function placeGuestOrder(input: PlaceOrderInput, customerUid: strin
       customer_uid: customerUid,
       guest_name: input.guestName ?? "",
       idempotency_key: input.idempotencyKey,
-      status: "placed",
+      // Online orders wait for payment and never reach the kitchen unpaid [D-24].
+      status: input.payChoice === "online" ? "pending_payment" : "placed",
       payment_method: null,
       subtotal_paise: bill.subtotalPaise,
       tax_paise: bill.taxPaise,

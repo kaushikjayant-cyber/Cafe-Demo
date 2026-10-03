@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, LoaderCircle, Trash2 } from "lucide-react";
+import { ArrowLeft, LoaderCircle, Smartphone, Store, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -34,6 +34,7 @@ export function CartView() {
   const { lines, setQty, remove, setPrice, checkoutKey, clear } = useCart();
   const [guestName, setGuestName] = useState("");
   const [note, setNote] = useState("");
+  const [payChoice, setPayChoice] = useState<"online" | "counter">(cafe.onlinePayments ? "online" : "counter");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [serverProblems, setServerProblems] = useState<Record<string, string>>({});
@@ -92,7 +93,7 @@ export function CartView() {
           lines: lines.map((l) => ({ itemId: l.itemId, optionIds: l.optionIds, qty: l.qty, note: l.note || undefined, unitPricePaise: l.unitPricePaise })),
           note: note.trim() || undefined,
           guestName: guestName.trim() || undefined,
-          payChoice: "counter",
+          payChoice,
           idempotencyKey: checkoutKey(),
         }),
       });
@@ -101,7 +102,8 @@ export function CartView() {
       if (response.ok) {
         clear();
         void refreshRecentOrders();
-        router.replace(`${basePath}/order/${body.orderId}`);
+        // Online orders go straight into checkout on the tracking page.
+        router.replace(`${basePath}/order/${body.orderId}${body.orderStatus === "pending_payment" ? "?pay=1" : ""}`);
         return;
       }
       if (body.code === "CART_CHANGED") {
@@ -238,7 +240,33 @@ export function CartView() {
         {cafe.gstMode === "regular" && cafe.pricesIncludeTax && (
           <p className="mt-1 text-xs text-[var(--g-muted)]">Includes GST of {formatINR(bill.taxPaise)}</p>
         )}
-        <p className="mt-3 rounded-lg bg-[var(--g-soft)] px-3 py-2 text-[var(--g-muted)]">You&apos;ll pay at the counter after your meal.</p>
+        {cafe.onlinePayments && cafe.allowPayAtCounter ? (
+          <fieldset className="mt-4 grid grid-cols-2 gap-2">
+            <legend className="mb-2 text-sm font-semibold text-[var(--g-ink)]">How would you like to pay?</legend>
+            {(
+              [
+                ["online", "Pay now", "UPI, cards, netbanking", Smartphone],
+                ["counter", "Pay at counter", "After your meal", Store],
+              ] as const
+            ).map(([value, title, hint, Icon]) => (
+              <label
+                key={value}
+                className={`flex cursor-pointer flex-col gap-1 rounded-xl p-3 ring-1 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--brand)] ${
+                  payChoice === value ? "bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] ring-2 ring-[var(--brand)]" : "ring-[var(--g-line)]"
+                }`}
+              >
+                <input type="radio" name="pay-choice" value={value} checked={payChoice === value} onChange={() => setPayChoice(value)} className="sr-only" />
+                <Icon className="size-5 text-[var(--brand)]" />
+                <span className="font-semibold text-[var(--g-ink)]">{title}</span>
+                <span className="text-xs text-[var(--g-muted)]">{hint}</span>
+              </label>
+            ))}
+          </fieldset>
+        ) : (
+          <p className="mt-3 rounded-lg bg-[var(--g-soft)] px-3 py-2 text-[var(--g-muted)]">
+            {payChoice === "online" ? "You'll pay online (UPI, cards) right after ordering." : "You'll pay at the counter after your meal."}
+          </p>
+        )}
       </section>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--g-line)] bg-[var(--g-bg)]/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur">
@@ -256,7 +284,7 @@ export function CartView() {
           >
             <span className="flex items-center gap-2">
               {submitting && <LoaderCircle className="size-5 animate-spin" />}
-              {submitting ? "Placing order…" : hasProblems ? "Fix the items above" : "Place order"}
+              {submitting ? "Placing order…" : hasProblems ? "Fix the items above" : payChoice === "online" ? "Place order & pay" : "Place order"}
             </span>
             <span className="tabular-nums">{formatINR(bill.totalPaise)}</span>
           </button>
