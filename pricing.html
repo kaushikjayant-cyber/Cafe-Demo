@@ -1,0 +1,505 @@
+<title>Cafe QR Ordering Pricing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: price sheet that reads top-down; plans → compare → build-your-package (with a printed-bill receipt) → maintenance → changes → terms */
+:root {
+  --bg: #F5F6F3;
+  --surface: #FFFFFF;
+  --fg: #1B2320;
+  --muted: #5B6862;
+  --line: #DCE1DD;
+  --accent: #0E7A63;
+  --accent-soft: #E2F1EC;
+  --crema: #B7791F;
+  --crema-soft: #FBF1DE;
+  --receipt: #FFFEFA;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111513; --surface: #181E1B; --fg: #E6EBE8; --muted: #9AA8A1; --line: #2B3430;
+    --accent: #3FC4A0; --accent-soft: #17302A; --crema: #E3AE57; --crema-soft: #2E2615; --receipt: #1D2320;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111513; --surface: #181E1B; --fg: #E6EBE8; --muted: #9AA8A1; --line: #2B3430;
+  --accent: #3FC4A0; --accent-soft: #17302A; --crema: #E3AE57; --crema-soft: #2E2615; --receipt: #1D2320;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 40px 20px 64px; display: grid; gap: 64px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; line-height: 1.1; }
+h1 { font-size: clamp(2.1rem, 5vw, 3.4rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 1.2rem; font-weight: 700; }
+p { margin: 0; }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); font-weight: 600; }
+.lead { font-size: 1.1rem; color: var(--muted); max-width: 62ch; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+section { display: grid; gap: 24px; }
+.sec-head { display: grid; gap: 8px; }
+
+/* Hero */
+.hero { display: grid; gap: 18px; }
+.flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; }
+.flow span { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; }
+.flow i { font-style: normal; color: var(--muted); }
+
+/* Plans */
+.plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+.plan { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; display: grid; grid-template-rows: auto auto auto 1fr auto; gap: 16px; position: relative; }
+.plan.popular { border: 2px solid var(--accent); }
+.badge { position: absolute; top: -12px; left: 24px; background: var(--accent); color: var(--surface); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; letter-spacing: .03em; }
+.price { display: grid; gap: 2px; }
+.price .big { font-family: var(--font-display); font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; }
+.price .small { color: var(--muted); font-size: 14px; }
+.amc { background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+.amc strong { font-size: 1.05rem; }
+.plan ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 14px; }
+.plan li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; }
+.plan li::before { content: "✓"; color: var(--accent); font-weight: 700; }
+.btn { font: inherit; font-weight: 600; border-radius: 10px; padding: 10px 14px; cursor: pointer; border: 1px solid var(--accent); background: transparent; color: var(--accent); }
+.btn:hover { background: var(--accent-soft); }
+.plan.popular .btn { background: var(--accent); color: var(--surface); }
+.btn:focus-visible, input:focus-visible + .tick, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.nosetup { background: var(--crema-soft); border-radius: 14px; padding: 18px 20px; }
+.nosetup div { display: grid; gap: 6px; }
+.nosetup strong { color: var(--fg); }
+
+/* Why us */
+.why { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 24px; }
+.why-item { display: grid; gap: 6px; align-content: start; border-top: 2px solid var(--accent); padding-top: 12px; }
+.why-item h3 { font-size: 1.05rem; }
+.why-item p { font-size: 14px; color: var(--muted); }
+@media (max-width: 920px) { .why { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .why { grid-template-columns: 1fr; } }
+
+/* Compare table */
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+th, td { padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+thead th { font-family: var(--font-display); font-size: 15px; position: sticky; top: 0; background: var(--surface); }
+td:not(:first-child), th:not(:first-child) { text-align: center; width: 18%; }
+tbody tr:last-child td { border-bottom: 0; }
+tr.group td { background: var(--bg); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.y { color: var(--accent); font-weight: 700; }
+.n { color: var(--muted); }
+.addon-tag { font-size: 12px; color: var(--crema); background: var(--crema-soft); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+
+/* Builder */
+.builder { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 20px; }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 10px; min-width: 0; }
+legend { font-weight: 600; margin-bottom: 8px; padding: 0; }
+.seg { display: flex; flex-wrap: wrap; gap: 8px; }
+.seg label { cursor: pointer; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg .tick { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-size: 14px; }
+.seg input:checked + .tick { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.addons { display: grid; gap: 0; }
+.addon { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.addon:last-child { border-bottom: 0; }
+.addon input { margin: 3px 0 0; width: 17px; height: 17px; accent-color: var(--accent); }
+.addon .name { font-weight: 600; }
+.addon .desc { font-size: 13px; color: var(--muted); }
+.addon .cost { text-align: right; font-size: 14px; white-space: nowrap; }
+.addon.included { cursor: default; }
+.addon.included .cost { color: var(--accent); font-weight: 600; }
+.cat { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; padding-top: 14px; }
+
+/* Receipt */
+.receipt { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); background: var(--receipt); border: 1px solid var(--line); border-radius: 4px; padding: 22px 20px 26px; font-family: var(--font-mono); font-size: 13px; display: grid; gap: 10px;
+  -webkit-mask: radial-gradient(circle 6px at 50% 100%, transparent 98%, #000) 0 0 / 16px 100% repeat-x; mask: radial-gradient(circle 6px at 50% 100%, transparent 98%, #000) 0 0 / 16px 100% repeat-x; }
+.receipt .r-title { text-align: center; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; }
+.receipt .r-sub { text-align: center; color: var(--muted); font-size: 12px; }
+.dash { border-top: 1px dashed var(--muted); opacity: .6; }
+.row { display: flex; justify-content: space-between; gap: 12px; }
+.row span:last-child { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.row.total { font-weight: 500; font-size: 15px; }
+.row.sub { color: var(--muted); font-size: 12px; }
+.gst { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); cursor: pointer; }
+.gst input { accent-color: var(--accent); }
+#lines { display: grid; gap: 6px; }
+
+/* Maintenance + changes */
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 12px; align-content: start; }
+.box ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.rate { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.rate:last-child { border-bottom: 0; }
+.rate .what { font-weight: 600; }
+.rate .eg { grid-column: 1; font-size: 13px; color: var(--muted); }
+.rate .amt { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-weight: 600; white-space: nowrap; }
+.terms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.term { border-top: 2px solid var(--fg); padding-top: 12px; display: grid; gap: 6px; }
+.term h3 { font-size: 1rem; }
+.term p { font-size: 14px; color: var(--muted); }
+.callout { background: var(--crema-soft); border-radius: 14px; padding: 20px; display: grid; gap: 8px; }
+.callout .math { font-family: var(--font-mono); font-size: 14px; }
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 20px; }
+
+@media (max-width: 920px) {
+  .plans { grid-template-columns: 1fr; }
+  .builder { grid-template-columns: 1fr; }
+  .receipt { position: static; }
+  .terms { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .two { grid-template-columns: 1fr; }
+  .wrap { gap: 48px; padding-block: 28px 48px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .seg .tick { transition: background .15s, border-color .15s; }
+}
+</style>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">QR table ordering for cafes</p>
+    <h1>Your menu on every table. Orders straight to your counter.</h1>
+    <p class="lead">Customers scan the QR on their table, order and pay from their phone. Your cashier sees every order the moment it's placed, and you see sales, best-sellers and reviews from anywhere.</p>
+    <div class="flow" aria-label="How it works">
+      <span>Scan table QR</span><i>→</i><span>Browse menu</span><i>→</i><span>Order &amp; pay</span><i>→</i><span>Counter gets it instantly</span><i>→</i><span>Owner sees the numbers</span>
+    </div>
+  </header>
+
+  <section aria-labelledby="why-h">
+    <div class="sec-head">
+      <p class="eyebrow">Why cafes pick us</p>
+      <h2 id="why-h">Built to fix what owners and customers dislike about QR menus</h2>
+    </div>
+    <div class="why">
+      <div class="why-item"><h3>Zero commission</h3><p>A flat fee, published openly. We never take a cut of your orders, and payments go straight to your bank.</p></div>
+      <div class="why-item"><h3>Price locked for 2 years</h3><p>Your maintenance fee won't go up for 24 months. No surprise hikes at renewal.</p></div>
+      <div class="why-item"><h3>Not a PDF menu</h3><p>A fast, photo-first menu that opens in the browser in about 2 seconds. No app download, no pinch-and-zoom.</p></div>
+      <div class="why-item"><h3>Scanning is optional</h3><p>Guests who don't want to use their phone can order through your staff on the same system, so every order lands in one place.</p></div>
+      <div class="why-item"><h3>Bigger bills</h3><p>“Goes well with” suggestions, combos and best-seller badges help guests add a dessert or an extra shot.</p></div>
+      <div class="why-item"><h3>Save the unhappy guest</h3><p>A low rating alerts you while the guest is still at the table, so you can fix it before they leave. Happy guests get a link to review you on Google.</p></div>
+      <div class="why-item"><h3>We set it all up</h3><p>We enter your menu, print your table QR cards and train your staff. Live in about 5 days.</p></div>
+      <div class="why-item"><h3>A real person on WhatsApp</h3><p>Same-day replies from the person who built your system, not a ticket queue.</p></div>
+      <div class="why-item"><h3>No new hardware</h3><p>Runs on the phone, tablet or laptop you already have.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="plans-h">
+    <div class="sec-head">
+      <p class="eyebrow">Plans</p>
+      <h2 id="plans-h">One-time setup, plus a small monthly maintenance fee</h2>
+      <p class="lead">Setup is paid once. Maintenance keeps your system online, backed up, updated and supported.</p>
+    </div>
+    <div class="plans">
+      <article class="plan">
+        <h3>Essential</h3>
+        <div class="price"><span class="big num">₹15,000</span><span class="small">one-time setup</span></div>
+        <div class="amc"><strong class="num">₹1,000</strong>/month maintenance<br><span class="muted">or ₹10,000/year (2 months free)</span></div>
+        <ul>
+          <li>QR ordering for up to 10 tables</li>
+          <li>Digital menu with photos, veg / non-veg tags and search</li>
+          <li>Sizes, add-ons and special instructions</li>
+          <li>Live “sold out” switch for the cashier</li>
+          <li>UPI / card payments and pay at counter</li>
+          <li>GST bills and a daily sales summary</li>
+          <li>Staff can take orders for guests who don't scan</li>
+          <li>2 staff logins</li>
+        </ul>
+        <button class="btn" type="button" data-pick="essential">Build with Essential</button>
+      </article>
+      <article class="plan popular">
+        <span class="badge">Most popular</span>
+        <h3>Growth</h3>
+        <div class="price"><span class="big num">₹20,000</span><span class="small">one-time setup</span></div>
+        <div class="amc"><strong class="num">₹1,000</strong>/month maintenance<br><span class="muted">or ₹10,000/year (2 months free)</span></div>
+        <ul>
+          <li>Everything in Essential, for up to 25 tables</li>
+          <li>Your logo and brand colours</li>
+          <li>Owner dashboard: best-sellers, peak hours, trends</li>
+          <li>“Goes well with” suggestions to raise bill size</li>
+          <li>Reviews with instant low-rating alerts and a Google review link</li>
+          <li>Call waiter and request bill buttons</li>
+          <li>Export bills and reports</li>
+          <li>5 staff logins, same-day support</li>
+        </ul>
+        <button class="btn" type="button" data-pick="growth">Build with Growth</button>
+      </article>
+      <article class="plan">
+        <h3>Premium</h3>
+        <div class="price"><span class="big num">₹30,000</span><span class="small">one-time setup</span></div>
+        <div class="amc"><strong class="num">₹1,000</strong>/month maintenance<br><span class="muted">or ₹10,000/year (2 months free)</span></div>
+        <ul>
+          <li>Everything in Growth, unlimited tables and staff</li>
+          <li>Kitchen display screen</li>
+          <li>Coupons, tips and split bill</li>
+          <li>Thermal printer KOT and bills</li>
+          <li>Your own web address (domain setup)</li>
+          <li>Priority support: reply within 4 hours, 7 days</li>
+        </ul>
+        <button class="btn" type="button" data-pick="premium">Build with Premium</button>
+      </article>
+    </div>
+    <div class="nosetup">
+      <div>
+        <h3>Prefer no upfront cost?</h3>
+        <p class="muted">Start on Growth with <strong>₹0 setup</strong> and pay <strong class="num">₹2,499/month</strong> with a 12-month commitment. After 12 months it drops to the normal ₹1,000/month.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="compare-h">
+    <div class="sec-head">
+      <p class="eyebrow">Compare</p>
+      <h2 id="compare-h">What each plan includes</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Feature</th><th>Essential</th><th>Growth</th><th>Premium</th></tr></thead>
+        <tbody>
+          <tr class="group"><td colspan="4">For your customers</td></tr>
+          <tr><td>Scan-to-order QR on every table</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Menu with photos, tags and search</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Sizes, add-ons, special instructions</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Live order tracking on their phone</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Pay by UPI / card, or at the counter</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Order through staff instead of scanning</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>“Goes well with” suggestions and combos</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Call waiter / request bill</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Rate their visit and dishes</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Tips and split bill</td><td><span class="addon-tag">Add-on</span></td><td><span class="addon-tag">Add-on</span></td><td class="y">✓</td></tr>
+          <tr class="group"><td colspan="4">For your counter &amp; kitchen</td></tr>
+          <tr><td>Live order screen with new-order sound</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>One-tap “sold out” for any item</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Kitchen display screen</td><td><span class="addon-tag">Add-on</span></td><td><span class="addon-tag">Add-on</span></td><td class="y">✓</td></tr>
+          <tr><td>Thermal printer KOT &amp; bills</td><td><span class="addon-tag">Add-on</span></td><td><span class="addon-tag">Add-on</span></td><td class="y">✓</td></tr>
+          <tr><td>Staff logins</td><td class="num">2</td><td class="num">5</td><td>Unlimited</td></tr>
+          <tr><td>Tables</td><td class="num">Up to 10</td><td class="num">Up to 25</td><td>Unlimited</td></tr>
+          <tr class="group"><td colspan="4">For the owner</td></tr>
+          <tr><td>GST bills and daily sales summary</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Best-sellers, peak hours, revenue trends</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Reviews dashboard and low-rating alerts</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Export bills and reports</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Your logo and colours</td><td class="n">Cafe name only</td><td class="y">✓</td><td class="y">✓</td></tr>
+          <tr><td>Coupons and discount codes</td><td><span class="addon-tag">Add-on</span></td><td><span class="addon-tag">Add-on</span></td><td class="y">✓</td></tr>
+          <tr><td>Your own web address</td><td><span class="addon-tag">Add-on</span></td><td><span class="addon-tag">Add-on</span></td><td class="y">✓</td></tr>
+          <tr class="group"><td colspan="4">Support</td></tr>
+          <tr><td>Support (WhatsApp only)</td><td>Mon–Sat, 10–7</td><td>Mon–Sat, 10–7</td><td>7 days, 9–10</td></tr>
+          <tr><td>Reply time</td><td>Same day</td><td>Same day</td><td>Within 4 hours</td></tr>
+          <tr><td>Menu &amp; content changes done for you</td><td class="num">1 hr / month</td><td class="num">2 hrs / month</td><td class="num">4 hrs / month</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="build-h">
+    <div class="sec-head">
+      <p class="eyebrow">Build your package</p>
+      <h2 id="build-h">Pick a plan and the extras you want</h2>
+      <p class="lead">The bill on the right updates as you choose. Extras can also be added any time later.</p>
+    </div>
+    <div class="builder">
+      <div class="panel">
+        <fieldset>
+          <legend>Plan</legend>
+          <div class="seg" id="plan-seg">
+            <label><input type="radio" name="plan" id="plan-essential" value="essential"><span class="tick">Essential</span></label>
+            <label><input type="radio" name="plan" id="plan-growth" value="growth" checked><span class="tick">Growth</span></label>
+            <label><input type="radio" name="plan" id="plan-premium" value="premium"><span class="tick">Premium</span></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Pay maintenance</legend>
+          <div class="seg">
+            <label><input type="radio" name="cycle" id="cycle-month" value="month" checked><span class="tick">Monthly</span></label>
+            <label><input type="radio" name="cycle" id="cycle-year" value="year"><span class="tick">Yearly (2 months free)</span></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Extras</legend>
+          <div class="addons" id="addons"></div>
+        </fieldset>
+      </div>
+
+      <aside class="receipt" aria-live="polite" aria-label="Your package estimate">
+        <div class="r-title">Your package</div>
+        <div class="r-sub">Estimate · prices in ₹</div>
+        <div class="dash"></div>
+        <div id="lines"></div>
+        <div class="dash"></div>
+        <div class="row total"><span>One-time total</span><span id="t-once">0</span></div>
+        <div class="row total"><span id="t-recur-label">Maintenance / month</span><span id="t-recur">0</span></div>
+        <div class="dash"></div>
+        <div class="row"><span>Advance to start (50%)</span><span id="t-adv">0</span></div>
+        <div class="row"><span>First-year total</span><span id="t-year">0</span></div>
+        <label class="gst"><input type="checkbox" id="gst"> Show with GST (18%)</label>
+        <div class="r-sub">Thank you · see you on go-live day</div>
+      </aside>
+    </div>
+  </section>
+
+  <section aria-labelledby="amc-h">
+    <div class="sec-head">
+      <p class="eyebrow">Maintenance</p>
+      <h2 id="amc-h">What your monthly fee covers</h2>
+    </div>
+    <div class="two">
+      <div class="box">
+        <h3>Included</h3>
+        <ul>
+          <li>Server hosting and database, online 24×7</li>
+          <li>Your web address (yourcafe.ourbrand.in) with SSL security</li>
+          <li>Daily backups of your menu, orders and bills</li>
+          <li>Bug fixes and security updates</li>
+          <li>We watch for downtime and fix issues before you notice</li>
+          <li>New improvements we make to the platform, free</li>
+          <li>WhatsApp support with a same-day reply, plus content-change hours as per your plan</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>Not included</h3>
+        <ul>
+          <li>New features and extras (priced above)</li>
+          <li>Payment gateway charges (Razorpay, about 2% per online payment, paid directly by you)</li>
+          <li>WhatsApp / SMS message charges</li>
+          <li>Hardware: tablet, printer, QR stands</li>
+          <li>Your own domain's yearly renewal (about ₹800–1,200)</li>
+          <li>Full redesigns</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="chg-h">
+    <div class="sec-head">
+      <p class="eyebrow">Changes</p>
+      <h2 id="chg-h">Changes and custom work</h2>
+      <p class="lead">Small updates come out of your monthly hours. Anything bigger gets a fixed quote in writing before work starts.</p>
+    </div>
+    <div class="box">
+      <div class="rate"><span class="what">Menu, price, photo and text updates</span><span class="eg">Within your plan's monthly hours</span><span class="amt">Free</span></div>
+      <div class="rate"><span class="what">Extra hours beyond your plan</span><span class="eg">Content changes, menu restructures, report requests</span><span class="amt num">₹600 / hr</span></div>
+      <div class="rate"><span class="what">Small feature tweak</span><span class="eg">E.g. a new field on the bill, a new report column (up to 1 day)</span><span class="amt num">₹1,500–3,500</span></div>
+      <div class="rate"><span class="what">New custom feature</span><span class="eg">Fixed quote after we agree the scope, billed at ₹4,000 per working day</span><span class="amt">Quoted</span></div>
+      <div class="rate"><span class="what">Urgent same-day work</span><span class="eg">Outside support hours or needed today</span><span class="amt">+50%</span></div>
+      <div class="rate"><span class="what">Upgrade your plan later</span><span class="eg">Pay only the difference in setup price</span><span class="amt">Difference</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="val-h">
+    <div class="callout">
+      <p class="eyebrow">Example math</p>
+      <h3 id="val-h">What it can be worth to a cafe doing 100 orders a day</h3>
+      <p class="math">₹20 extra per bill from add-on suggestions × 100 orders × 30 days = ₹60,000 more sales a month</p>
+      <p class="muted">This is an illustration, not a promise. Results depend on your menu and customers. Faster table turns, fewer wrong orders and no reprinting menus add to it.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="terms-h">
+    <div class="sec-head">
+      <p class="eyebrow">Terms</p>
+      <h2 id="terms-h">How it works</h2>
+    </div>
+    <div class="terms">
+      <div class="term"><h3>Try it first</h3><p>7-day free trial with your own menu on our test system before you pay anything.</p></div>
+      <div class="term"><h3>Payment</h3><p>50% advance to start, 50% on go-live. Maintenance is billed monthly or yearly in advance.</p></div>
+      <div class="term"><h3>Go-live</h3><p>About 5–7 days after we receive your menu, photos and payment details. Includes QR table cards and staff training.</p></div>
+      <div class="term"><h3>Your money</h3><p>Online payments go straight into your own Razorpay account and bank. We never handle your money.</p></div>
+      <div class="term"><h3>Your data</h3><p>Your orders and reports belong to you. Export them any time.</p></div>
+      <div class="term"><h3>Licence</h3><p>You get a licence to use the software, with hosting and updates included while maintenance is active. If maintenance lapses, there is a 15-day grace period before service pauses.</p></div>
+    </div>
+  </section>
+
+  <footer>Prices are in Indian Rupees and exclude GST, which is added at 18% where applicable. Prices valid for 30 days from the date this sheet is shared.</footer>
+</div>
+
+<script>
+const PLANS = {
+  essential: { name: "Essential", setup: 15000, month: 1000, year: 10000 },
+  growth:    { name: "Growth",    setup: 20000, month: 1000, year: 10000 },
+  premium:   { name: "Premium",   setup: 30000, month: 1000, year: 10000 }
+};
+// once = one-time price, month = extra monthly fee, premium = included in Premium
+const ADDONS = [
+  { cat: "Counter & kitchen" },
+  { id: "kds",      name: "Kitchen display screen", desc: "Orders appear on a kitchen tablet with timers and a Ready button", once: 4999, premium: true },
+  { id: "printer",  name: "Thermal printer KOT & bills", desc: "Print kitchen tickets and bills (printer not included)", once: 3999, premium: true },
+  { id: "coupons",  name: "Coupons & discount codes", desc: "Run offers like HAPPY10 or a weekday combo", once: 2999, premium: true },
+  { id: "tips",     name: "Tips & split bill", desc: "Customers add a tip or split the bill between friends", once: 2999, premium: true },
+  { id: "domain",   name: "Your own web address", desc: "e.g. order.yourcafe.in (domain renewal billed at cost)", once: 999, premium: true },
+  { cat: "Grow your business" },
+  { id: "lang",     name: "Menu in another language", desc: "Hindi or a regional language, per language", once: 1999 },
+  { id: "loyalty",  name: "Loyalty points", desc: "Customers earn points by phone number and redeem them", once: 7999, month: 299 },
+  { id: "takeaway", name: "Takeaway & pre-order", desc: "Order ahead and pick up, no table needed", once: 7999, month: 199 },
+  { id: "whatsapp", name: "WhatsApp bills & order updates", desc: "Message charges billed at actual cost", once: 4999 },
+  { id: "inventory",name: "Stock & inventory tracking", desc: "Items go sold out automatically when ingredients run low", once: 9999, month: 299 },
+  { id: "insights", name: "Smart sales insights", desc: "Monthly suggestions on what to promote, price or drop", month: 499 },
+  { id: "branch",   name: "Additional branch", desc: "Another outlet under the same owner login", once: 7999, month: 699 },
+  { cat: "Setup help" },
+  { id: "menu",     name: "Menu entered for you", desc: "We type in your menu and add-ons, up to 80 items (you share photos)", once: 1499 }
+];
+
+const inr = n => "₹" + Math.round(n).toLocaleString("en-IN");
+const $ = s => document.querySelector(s);
+
+function renderAddons() {
+  const plan = document.querySelector('input[name="plan"]:checked').value;
+  const keep = new Set([...document.querySelectorAll('#addons input:checked')].map(i => i.value));
+  $("#addons").innerHTML = ADDONS.map(a => {
+    if (a.cat) return `<div class="cat">${a.cat}</div>`;
+    const included = plan === "premium" && a.premium;
+    const cost = included ? "Included"
+      : [a.once ? inr(a.once) : "", a.month ? inr(a.month) + "/mo" : ""].filter(Boolean).join(" + ");
+    return `<label class="addon${included ? " included" : ""}" for="ad-${a.id}">
+      <input type="checkbox" id="ad-${a.id}" value="${a.id}" ${included ? "checked disabled" : keep.has(a.id) ? "checked" : ""}>
+      <span><span class="name">${a.name}</span><br><span class="desc">${a.desc}</span></span>
+      <span class="cost num">${cost}</span></label>`;
+  }).join("");
+}
+
+function update() {
+  const planKey = document.querySelector('input[name="plan"]:checked').value;
+  const yearly = document.querySelector('input[name="cycle"]:checked').value === "year";
+  const gst = $("#gst").checked ? 1.18 : 1;
+  const p = PLANS[planKey];
+  const chosen = ADDONS.filter(a => a.id && !(planKey === "premium" && a.premium) && $("#ad-" + a.id)?.checked);
+
+  let once = p.setup, monthly = 0;
+  const lines = [`<div class="row"><span>${p.name} setup</span><span>${inr(p.setup)}</span></div>`];
+  chosen.forEach(a => {
+    once += a.once || 0;
+    monthly += a.month || 0;
+    lines.push(`<div class="row"><span>${a.name}</span><span>${a.once ? inr(a.once) : "—"}</span></div>`);
+  });
+  const planRecur = yearly ? p.year : p.month;
+  lines.push(`<div class="row sub"><span>${p.name} maintenance</span><span>${inr(planRecur)}/${yearly ? "yr" : "mo"}</span></div>`);
+  chosen.filter(a => a.month).forEach(a =>
+    lines.push(`<div class="row sub"><span>${a.name}</span><span>${inr(yearly ? a.month * 12 : a.month)}/${yearly ? "yr" : "mo"}</span></div>`));
+  $("#lines").innerHTML = lines.join("");
+
+  const recur = planRecur + (yearly ? monthly * 12 : monthly);
+  const firstYear = once + (yearly ? recur : recur * 12);
+  $("#t-once").textContent = inr(once * gst);
+  $("#t-recur-label").textContent = yearly ? "Maintenance / year" : "Maintenance / month";
+  $("#t-recur").textContent = inr(recur * gst);
+  $("#t-adv").textContent = inr(once * 0.5 * gst);
+  $("#t-year").textContent = inr(firstYear * gst);
+}
+
+document.addEventListener("change", e => {
+  if (e.target.name === "plan") renderAddons();
+  update();
+});
+document.querySelectorAll("[data-pick]").forEach(b => b.addEventListener("click", () => {
+  $("#plan-" + b.dataset.pick).checked = true;
+  renderAddons(); update();
+  $("#build-h").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}));
+renderAddons();
+update();
+</script>

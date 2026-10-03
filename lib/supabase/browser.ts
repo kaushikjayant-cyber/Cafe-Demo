@@ -1,0 +1,16 @@
+"use client";
+
+import { createBrowserClient } from "@supabase/ssr";
+
+import { publicEnv } from "@/lib/env";
+
+let client: ReturnType<typeof createBrowserClient> | undefined;
+
+/** One shared browser client, so realtime channels and the session aren't duplicated. */
+export function getBrowserClient() {
+  if (!client) {
+    const env = publicEnv();
+    client = createBrowserClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+  }
+  return client;
+}
