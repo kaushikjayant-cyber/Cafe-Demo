@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, LoaderCircle, Smartphone, Store, Trash2 } from "lucide-react";
+import { ArrowLeft, LoaderCircle, Plus, Smartphone, Store, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -8,9 +8,11 @@ import { useEffect, useMemo, useState } from "react";
 import { itemIsAvailable, orderingBlockedReason, type MenuItem } from "@/lib/menu-types";
 import { computeBill, formatINR } from "@/lib/money";
 import type { CartProblem } from "@/lib/orders/validate";
+import { cartSuggestion } from "@/lib/upsell";
 
 import { cartCount, useCart, type CartLine } from "./cart-store";
 import { useGuest } from "./guest-provider";
+import { ItemSheet } from "./item-sheet";
 import { QtyStepper } from "./qty-stepper";
 
 /** Why a cart line can't be ordered against the live menu, or null. Price changes are fixed up automatically. */
@@ -31,7 +33,9 @@ function livePrice(line: CartLine, item: MenuItem | undefined): number | null {
 export function CartView() {
   const router = useRouter();
   const { cafe, table, items, basePath, ensureSession, refreshRecentOrders, showNotice, cartReady } = useGuest();
-  const { lines, setQty, remove, setPrice, checkoutKey, clear } = useCart();
+  const { lines, setQty, remove, setPrice, checkoutKey, clear, add } = useCart();
+  const [suggestionOpen, setSuggestionOpen] = useState<MenuItem | null>(null);
+  const suggestion = useMemo(() => cartSuggestion(lines.map((l) => l.itemId), items), [lines, items]);
   const [guestName, setGuestName] = useState("");
   const [note, setNote] = useState("");
   const [payChoice, setPayChoice] = useState<"online" | "counter">(cafe.onlinePayments ? "online" : "counter");
@@ -170,7 +174,7 @@ export function CartView() {
           >
             <div className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
-                <p className="font-semibold leading-snug">{line.name}</p>
+                <p className="font-heading text-lg leading-snug">{line.name}</p>
                 {line.optionLabels.length > 0 && <p className="text-sm text-[var(--g-muted)]">{line.optionLabels.join(", ")}</p>}
                 {line.note && <p className="text-sm text-[var(--g-muted)] italic">“{line.note}”</p>}
               </div>
@@ -196,6 +200,30 @@ export function CartView() {
       <Link href={basePath} className="mx-4 mt-3 text-sm font-semibold text-[var(--brand)]">
         + Add more items
       </Link>
+
+      {suggestion && (
+        <div key={suggestion.id} className="anim-rise mx-4 mt-4 flex items-center gap-3 rounded-md border border-dashed border-[var(--g-accent)] bg-[color-mix(in_srgb,var(--g-accent)_6%,transparent)] p-3">
+          <div className="min-w-0 flex-1">
+            <p className="label-caps text-[var(--g-accent)]">Goes well with your order</p>
+            <p className="mt-0.5 text-sm">
+              Add a <span className="font-heading text-base">{suggestion.name}</span> for{" "}
+              <span className="font-semibold tabular-nums">{formatINR(suggestion.pricePaise)}</span>?
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              suggestion.groups.length === 0
+                ? add({ itemId: suggestion.id, name: suggestion.name, optionIds: [], optionLabels: [], unitPricePaise: suggestion.pricePaise, qty: 1, note: "" })
+                : setSuggestionOpen(suggestion)
+            }
+            className="flex h-10 shrink-0 items-center gap-1 rounded bg-[var(--brand)] px-3 text-sm font-semibold text-[var(--brand-fg)] active:scale-[0.97]"
+          >
+            <Plus className="size-4" /> Add
+          </button>
+        </div>
+      )}
+      {suggestionOpen && <ItemSheet key={suggestionOpen.id} item={suggestionOpen} onClose={() => setSuggestionOpen(null)} onAdd={add} />}
 
       <section className="anim-rise mx-4 mt-6 flex flex-col gap-3" style={{ "--i": 3 } as React.CSSProperties}>
         <div>

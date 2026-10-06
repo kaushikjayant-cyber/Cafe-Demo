@@ -38,6 +38,7 @@ interface TableRow {
     opening_hours: OpeningHours | null;
     status: "trial" | "active" | "grace" | "suspended";
     is_demo: boolean;
+    google_review_url: string | null;
   };
 }
 
@@ -68,7 +69,7 @@ interface ItemRow {
  */
 export const getMenuItems = cache(async (cafeId: string): Promise<{ categories: MenuCategory[]; items: MenuItem[] }> => {
   const supabase = createAdminClient();
-  const [categories, items] = await Promise.all([
+  const [categories, items, insights, manualPairs, autoPairs] = await Promise.all([
     supabase
       .from("categories")
       .select("id, name")
@@ -87,9 +88,20 @@ export const getMenuItems = cache(async (cafeId: string): Promise<{ categories: 
       .is("archived_at", null)
       .order("sort")
       .returns<ItemRow[]>(),
+    supabase.from("item_insights").select("item_id").eq("cafe_id", cafeId).eq("is_bestseller", true),
+    supabase.from("item_pairings").select("item_id, paired_item_id").eq("cafe_id", cafeId).order("sort"),
+    supabase.from("auto_pairings").select("item_id, paired_item_id").eq("cafe_id", cafeId).order("together", { ascending: false }),
   ]);
   if (categories.error) throw categories.error;
   if (items.error) throw items.error;
+  // The upsell cache is a nice-to-have: a failure there must never break the menu.
+  const bestsellers = new Set((insights.data ?? []).map((r) => r.item_id));
+  const pairs = new Map<string, string[]>();
+  for (const row of [...(manualPairs.data ?? []), ...(autoPairs.data ?? [])]) {
+    const list = pairs.get(row.item_id) ?? [];
+    if (!list.includes(row.paired_item_id)) list.push(row.paired_item_id);
+    pairs.set(row.item_id, list);
+  }
 
   const visibleCategories = new Set(categories.data.map((c) => c.id));
   const menuItems: MenuItem[] = items.data
@@ -102,7 +114,7 @@ export const getMenuItems = cache(async (cafeId: string): Promise<{ categories: 
       pricePaise: item.price_paise,
       imageUrl: publicImageUrl(item.image_path),
       diet: item.diet,
-      tags: item.tags,
+      tags: bestsellers.has(item.id) && !item.tags.includes("bestseller") ? [...item.tags, "bestseller"] : item.tags,
       isAvailable: item.is_available,
       soldOutUntil: item.sold_out_until,
       groups: [...item.option_groups]
@@ -116,7 +128,11 @@ export const getMenuItems = cache(async (cafeId: string): Promise<{ categories: 
             .sort((a, b) => a.sort - b.sort)
             .map((o) => ({ id: o.id, name: o.name, priceDeltaPaise: o.price_delta_paise, available: o.is_available })),
         })),
+      pairs: pairs.get(item.id) ?? [],
     }));
+  // Only pair with items that are actually on the menu, at most 3.
+  const onMenu = new Set(menuItems.map((i) => i.id));
+  for (const item of menuItems) item.pairs = item.pairs.filter((id) => onMenu.has(id)).slice(0, 3);
 
   return { categories: categories.data, items: menuItems };
 });
@@ -135,7 +151,7 @@ export const getGuestMenu = cache(async (token: string): Promise<GuestMenu | nul
     .select(
       "id, label, token, is_active, archived_at, cafes!inner(id, slug, name, logo_path, brand_color, timezone, " +
         "gst_mode, tax_rate_bp, prices_include_tax, allow_pay_at_counter, ordering_paused, pause_message, " +
-        "opening_hours, status, is_demo)",
+        "opening_hours, status, is_demo, google_review_url)",
     )
     .eq("token", token)
     .maybeSingle<TableRow>();
@@ -163,6 +179,7 @@ export const getGuestMenu = cache(async (token: string): Promise<GuestMenu | nul
       isOpen: isOpenAt(cafe.opening_hours, new Date(), cafe.timezone),
       status: cafe.status,
       isDemo: cafe.is_demo,
+      googleReviewUrl: cafe.google_review_url,
     },
     table: { id: table.id, label: table.label, token: table.token, isActive: table.is_active && !table.archived_at },
     categories,

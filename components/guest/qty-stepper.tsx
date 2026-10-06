@@ -12,10 +12,10 @@ interface Props {
 }
 
 export function QtyStepper({ qty, onChange, min = 0, max = 20, label, size = "md" }: Props) {
-  const h = size === "sm" ? "h-8" : "h-11";
-  const w = size === "sm" ? "w-8" : "w-11";
+  const h = size === "sm" ? "h-10" : "h-11";
+  const w = size === "sm" ? "w-9" : "w-11";
   return (
-    <div className={`inline-flex ${h} items-center rounded-lg border border-[var(--g-line)] bg-[var(--g-surface)]`} role="group" aria-label={label}>
+    <div className={`inline-flex ${h} items-center rounded border border-[var(--g-line)] bg-[var(--g-raised)]`} role="group" aria-label={label}>
       <button
         type="button"
         className={`${w} ${h} grid place-items-center text-[var(--brand)] disabled:opacity-30`}

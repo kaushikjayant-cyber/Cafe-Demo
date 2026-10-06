@@ -58,7 +58,7 @@ export function OrderCard({ order, now, busy, onTransition, onPay, canRefund, on
 
   return (
     <article
-      className={`anim-rise relative overflow-hidden rounded-2xl bg-[var(--g-surface)] shadow-sm ring-1 ring-[var(--g-line)] ${isNew ? "anim-ring-pulse" : ""}`}
+      className={`anim-rise relative overflow-hidden rounded-md bg-[var(--g-surface)] ring-1 ring-[var(--g-line)] ${isNew ? "anim-ring-pulse" : ""}`}
       aria-label={`Order ${order.daily_no}`}
     >
       {order.status !== "served" && <span aria-hidden className={`absolute inset-y-0 left-0 w-1.5 ${STRIPE[tone]}`} />}
@@ -67,7 +67,7 @@ export function OrderCard({ order, now, busy, onTransition, onPay, canRefund, on
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="font-heading text-2xl font-bold tabular-nums">#{order.daily_no}</span>
-              <span className="rounded-lg bg-[var(--g-ink)] px-2 py-0.5 text-sm font-bold text-white">{order.tables?.label ?? "Counter"}</span>
+              <span className="rounded-full bg-[var(--g-ink)] px-2.5 py-0.5 text-sm font-semibold text-[var(--g-bg)]">{order.tables?.label ?? "Counter"}</span>
               <span title={order.source === "qr" ? "Ordered by QR" : "Taken by staff"} className="text-[var(--g-muted)]">
                 {order.source === "qr" ? <QrCode className="size-4" /> : <UserRound className="size-4" />}
               </span>

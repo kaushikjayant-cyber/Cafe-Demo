@@ -37,6 +37,7 @@ export const LIMITS = {
   ordersPerGuest: { max: 5, windowMs: 10 * 60_000 },
   ordersPerTable: { max: 20, windowMs: 10 * 60_000 },
   serviceRequestPerTable: { max: 1, windowMs: 2 * 60_000 },
+  reviewsPerGuest: { max: 10, windowMs: 10 * 60_000 },
 } satisfies Record<string, Limit>;
 
 export const rateLimiter = new RateLimiter();

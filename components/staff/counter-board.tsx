@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing, Check, ReceiptText } from "lucide-react";
+import { BellRing, Check, ReceiptText, Star } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { formatINR } from "@/lib/money";
@@ -37,13 +37,13 @@ export function CounterBoard(props: Props) {
 }
 
 function Board({ tenantKey, base, cafe, staff }: Props) {
-  const { orders, requests, connection, loaded, reload, patchOrder, dropRequest } = useLiveOrders(cafe.id);
+  const { orders, requests, lowReviews, connection, loaded, reload, patchOrder, dropRequest, dropLowReview } = useLiveOrders(cafe.id);
   const now = useNow();
   const toast = useStaffToast();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [mobileColumn, setMobileColumn] = useState("new");
 
-  const attention = orders.filter((o) => o.status === "placed" || o.needs_attention).length + requests.length;
+  const attention = orders.filter((o) => o.status === "placed" || o.needs_attention).length + requests.length + lowReviews.length;
   useAttentionAlert(attention, "New orders");
 
   const fail = useCallback(
@@ -124,9 +124,45 @@ function Board({ tenantKey, base, cafe, staff }: Props) {
     [dropRequest, fail],
   );
 
+  const handleReview = useCallback(
+    async (id: string) => {
+      dropLowReview(id);
+      const { error } = await getBrowserClient().rpc("handle_review", { p_review: id });
+      if (error) fail(error.message);
+    },
+    [dropLowReview, fail],
+  );
+
   return (
     <StaffShell tenantKey={tenantKey} base={base} cafe={cafe} staff={staff} connection={connection}>
       <main className="flex flex-1 flex-col gap-4 p-4">
+        {lowReviews.length > 0 && (
+          <section aria-label="Unhappy guests" className="flex flex-col gap-2">
+            {lowReviews.map((review) => (
+              <div key={review.id} role="alert" className="anim-rise anim-ring-pulse flex flex-wrap items-center gap-3 rounded-md bg-[var(--g-accent)] py-2 pr-2 pl-4 text-white">
+                <span className="flex items-center gap-0.5" aria-label={`${review.rating} out of 5 stars`}>
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star key={i} className={`size-4 ${i < review.rating ? "fill-white" : "opacity-40"}`} />
+                  ))}
+                </span>
+                <span className="min-w-0 flex-1 text-sm">
+                  <span className="font-bold">{review.orders?.tables?.label ?? "Counter"}</span>
+                  {review.orders && <span className="opacity-80"> · #{review.orders.daily_no}</span>} rated {review.rating}★
+                  {review.comment ? <span>: “{review.comment}”</span> : <span className="opacity-80"> (no comment). Go and check on them.</span>}
+                  <span className="ml-2 opacity-70">{minutesSince(review.created_at, now) || "<1"} min</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleReview(review.id)}
+                  className="flex h-10 items-center gap-1.5 rounded bg-white px-3 text-sm font-semibold text-[var(--g-accent)] transition-transform active:scale-95"
+                >
+                  <Check className="size-4" /> Handled
+                </button>
+              </div>
+            ))}
+          </section>
+        )}
+
         {requests.length > 0 && (
           <section aria-label="Table requests" className="flex flex-wrap gap-2">
             {requests.map((request) => (

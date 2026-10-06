@@ -42,6 +42,15 @@ export interface ServiceRequest {
   tables: { label: string } | null;
 }
 
+/** A rating of 2★ or less that nobody has dealt with yet (§5.9). */
+export interface LowReview {
+  id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  orders: { daily_no: number; tables: { label: string } | null } | null;
+}
+
 export type Connection = "connecting" | "live" | "offline";
 
 /** Orders the counter or kitchen still has to act on. Served-and-paid orders are completed. */
@@ -78,6 +87,22 @@ async function fetchRequests(cafeId: string): Promise<ServiceRequest[]> {
   return data;
 }
 
+const LOW_REVIEW_WINDOW_MS = 12 * 60 * 60 * 1000;
+
+async function fetchLowReviews(cafeId: string): Promise<LowReview[]> {
+  const { data, error } = await getBrowserClient()
+    .from("reviews")
+    .select("id, rating, comment, created_at, orders(daily_no, tables(label))")
+    .eq("cafe_id", cafeId)
+    .lte("rating", 2)
+    .is("handled_at", null)
+    .gte("created_at", new Date(Date.now() - LOW_REVIEW_WINDOW_MS).toISOString())
+    .order("created_at")
+    .returns<LowReview[]>();
+  if (error) throw error;
+  return data;
+}
+
 function upsert(orders: BoardOrder[], order: BoardOrder): BoardOrder[] {
   const rest = orders.filter((o) => o.id !== order.id);
   if (!BOARD_STATUSES.includes(order.status)) return rest;
@@ -92,6 +117,7 @@ function upsert(orders: BoardOrder[], order: BoardOrder): BoardOrder[] {
 export function useLiveOrders(cafeId: string) {
   const [orders, setOrders] = useState<BoardOrder[]>([]);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [lowReviews, setLowReviews] = useState<LowReview[]>([]);
   const [connection, setConnection] = useState<Connection>("connecting");
   const [loaded, setLoaded] = useState(false);
   const ordersRef = useRef<BoardOrder[]>([]);
@@ -101,9 +127,10 @@ export function useLiveOrders(cafeId: string) {
 
   const reload = useCallback(async () => {
     try {
-      const [o, r] = await Promise.all([fetchOrders(cafeId), fetchRequests(cafeId)]);
+      const [o, r, lr] = await Promise.all([fetchOrders(cafeId), fetchRequests(cafeId), fetchLowReviews(cafeId)]);
       setOrders(o);
       setRequests(r);
+      setLowReviews(lr);
       setLoaded(true);
     } catch {
       setConnection("offline");
@@ -119,6 +146,7 @@ export function useLiveOrders(cafeId: string) {
   }, []);
 
   const dropRequest = useCallback((id: string) => setRequests((current) => current.filter((r) => r.id !== id)), []);
+  const dropLowReview = useCallback((id: string) => setLowReviews((current) => current.filter((r) => r.id !== id)), []);
 
   useEffect(() => {
     let active = true;
@@ -126,10 +154,11 @@ export function useLiveOrders(cafeId: string) {
     const run = (task: () => Promise<void>) => void task().catch(() => active && setConnection("offline"));
 
     run(async () => {
-      const [o, r] = await Promise.all([fetchOrders(cafeId), fetchRequests(cafeId)]);
+      const [o, r, lr] = await Promise.all([fetchOrders(cafeId), fetchRequests(cafeId), fetchLowReviews(cafeId)]);
       if (!active) return;
       setOrders(o);
       setRequests(r);
+      setLowReviews(lr);
       setLoaded(true);
     });
 
@@ -170,6 +199,12 @@ export function useLiveOrders(cafeId: string) {
             if (active) setRequests(r);
           }),
         )
+        .on("postgres_changes", { event: "*", schema: "public", table: "reviews", filter: `cafe_id=eq.${cafeId}` }, () =>
+          run(async () => {
+            const lr = await fetchLowReviews(cafeId);
+            if (active) setLowReviews(lr);
+          }),
+        )
         .subscribe((status) => {
           if (!active) return;
           if (status === "SUBSCRIBED") {
@@ -200,5 +235,5 @@ export function useLiveOrders(cafeId: string) {
     };
   }, [cafeId, reload]);
 
-  return { orders, requests, connection, loaded, reload, patchOrder, dropRequest };
+  return { orders, requests, lowReviews, connection, loaded, reload, patchOrder, dropRequest, dropLowReview };
 }

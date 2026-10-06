@@ -55,6 +55,18 @@ export async function saveItem(tenantKey: string, input: ItemInput): Promise<Act
   });
 }
 
+/** Manual "Goes well with" for one item (up to 3), shown before the automatic pairs. */
+export async function setItemPairings(tenantKey: string, itemId: string, pairedIds: string[]): Promise<ActionResult> {
+  return run(async () => {
+    await adminContext(tenantKey);
+    const ids = z.array(z.uuid()).max(3, "Pick up to 3 items.").safeParse(pairedIds);
+    if (!ids.success) throw new ActionError(ids.error.issues[0].message);
+    const { error } = await (await createUserClient()).rpc("set_item_pairings", { p_item: z.uuid().parse(itemId), p_paired: [...new Set(ids.data)] });
+    if (error) throw error;
+    return undefined;
+  });
+}
+
 export async function archiveItem(tenantKey: string, itemId: string): Promise<ActionResult> {
   return run(async () => {
     await adminContext(tenantKey);

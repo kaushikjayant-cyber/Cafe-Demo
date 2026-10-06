@@ -130,20 +130,78 @@
 }
 /* Guest (customer) pages: light, warm-neutral ground so food photos read well [D-39].
    --brand / --brand-fg are set per cafe on the guest layout. */
+/* Japandi design system (Stitch): cream paper canvas, sandstone tiles, washed-ash 1px lines,
+   espresso ink, terracotta for focus/urgency, sage for done/paid. Serif headings, never bold. */
 .guest {
-  --g-bg: #f8f7f4;
-  --g-surface: #ffffff;
-  --g-ink: #1c1b18;
-  --g-muted: #686660;
-  --g-line: #e7e4dd;
-  --g-soft: #f0eee9;
-  --g-veg: #1e8e3e;
+  --g-bg: #fbf9f5;
+  --g-surface: #f3efea;
+  --g-raised: #ffffff;
+  --g-ink: #1c1917;
+  --g-muted: #78716c;
+  --g-line: #e5dfd7;
+  --g-soft: #ebe5dd;
+  --g-accent: #c25e3e;
+  --g-sage: #4a6b5d;
+  --g-veg: #4a6b5d;
   --g-nonveg: #a5281d;
-  --g-egg: #c27803;
-  --g-danger: #b42318;
+  --g-egg: #b7791f;
+  --g-danger: #ba1a1a;
+  --radius: 0.3rem;
   color-scheme: light;
   background: var(--g-bg);
   color: var(--g-ink);
+}
+/* Remap Tailwind's status palettes onto the design's sage / terracotta / cinnamon so every
+   existing badge, alert and ticket colour follows the design without touching components. */
+.guest {
+  --color-emerald-50: #e6ece8;
+  --color-emerald-200: #c3d3ca;
+  --color-emerald-500: #4a6b5d;
+  --color-emerald-600: #4a6b5d;
+  --color-emerald-700: #3d5a4e;
+  --color-emerald-800: #2d4d40;
+  --color-emerald-900: #233d33;
+  --color-green-50: #e6ece8;
+  --color-amber-50: #f6ece2;
+  --color-amber-100: #f1e2d3;
+  --color-amber-200: #e8d2bd;
+  --color-amber-300: #dcbb9c;
+  --color-amber-400: #b7791f;
+  --color-amber-500: #b7791f;
+  --color-amber-700: #8a5a17;
+  --color-amber-800: #7a4f14;
+  --color-amber-900: #5e3c0f;
+  --color-red-50: #f8e9e3;
+  --color-red-200: #ecc6b8;
+  --color-red-500: #c25e3e;
+  --color-red-600: #b2512f;
+  --color-red-700: #9d4225;
+  --color-red-800: #7e2c10;
+  --color-red-900: #5c1f0a;
+}
+.guest.kds {
+  --color-emerald-500: #6f9a86;
+  --color-emerald-600: #4a6b5d;
+  --color-amber-300: #e3b57a;
+  --color-amber-400: #d29a4f;
+}
+.guest .font-heading {
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+/* Small utility labels: uppercase, widened tracking. */
+.guest .label-caps {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.guest .shadow-lg, .guest .shadow-xl, .guest .shadow-2xl {
+  box-shadow: 0 4px 20px -2px rgba(28, 25, 23, 0.05), 0 2px 6px -1px rgba(28, 25, 23, 0.03);
+}
+.guest input:focus-visible, .guest textarea:focus-visible, .guest select:focus-visible {
+  border-color: var(--g-ink);
+  outline: none;
 }
 
 .no-scrollbar {

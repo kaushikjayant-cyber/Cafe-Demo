@@ -21,6 +21,7 @@ const latte: MenuItem = {
   tags: [],
   isAvailable: true,
   soldOutUntil: null,
+  pairs: [],
   groups: [
     {
       id: id(),

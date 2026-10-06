@@ -1,11 +1,12 @@
 "use client";
 
-import { ChevronRight, Clock3, Search, X } from "lucide-react";
+import { ChevronRight, Clock3, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { itemIsAvailable, orderingBlockedReason, type MenuItem } from "@/lib/menu-types";
 import { formatINR } from "@/lib/money";
+import { goesWellWith } from "@/lib/upsell";
 import { isActive, type OrderStatus } from "@/lib/order-state";
 
 import { cartCount, cartTotal, useCart } from "./cart-store";
@@ -135,7 +136,7 @@ export function MenuView() {
 
       <div className="sticky top-0 z-20 border-b border-[var(--g-line)] bg-[var(--g-bg)]/95 backdrop-blur">
         <div className="flex items-center gap-2 px-4 pt-2 pb-2">
-          <label className="flex h-11 flex-1 items-center gap-2 rounded-xl border border-[var(--g-line)] bg-[var(--g-surface)] px-3 focus-within:border-[var(--brand)]">
+          <label className="flex h-11 flex-1 items-center gap-2 rounded border border-[var(--g-line)] bg-[var(--g-raised)] px-3 focus-within:border-[var(--g-ink)]">
             <Search className="size-4 text-[var(--g-muted)]" />
             <span className="sr-only">Search the menu</span>
             <input
@@ -168,7 +169,7 @@ export function MenuView() {
             <span
               ref={pillRef}
               aria-hidden
-              className="ease-spring absolute top-0 left-0 rounded-full bg-[var(--brand)] opacity-0 transition-[transform,width,opacity] duration-300"
+              className="ease-spring absolute top-0 left-0 rounded-full bg-[var(--g-accent)] opacity-0 transition-[transform,width,opacity] duration-300"
             />
             {sections.map(({ category }) => (
               <a
@@ -177,7 +178,7 @@ export function MenuView() {
                 href={`#cat-${category.id}`}
                 aria-current={activeCategory === category.id ? "true" : undefined}
                 className={`relative z-10 shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors duration-300 ${
-                  activeCategory === category.id ? "text-[var(--brand-fg)]" : "text-[var(--g-muted)] hover:text-[var(--g-ink)]"
+                  activeCategory === category.id ? "text-white" : "text-[var(--g-muted)] hover:text-[var(--g-ink)]"
                 }`}
               >
                 {category.name}
@@ -195,8 +196,8 @@ export function MenuView() {
 
       {sections.map(({ category, items: sectionItems }) => (
         <section key={category.id} id={`cat-${category.id}`} data-menu-section className="scroll-mt-28 px-4 pt-6">
-          <h2 className="mb-1 font-heading text-lg font-bold">{category.name}</h2>
-          <ul className="divide-y divide-[var(--g-line)]">
+          <h2 className="mb-3 font-heading text-2xl">{category.name}</h2>
+          <ul className="flex flex-col gap-3">
             {sectionItems.map((item) => (
               <MenuRow key={item.id} item={item} index={rowIndex.get(item.id) ?? 0} canOrder={!blocked} onOpen={() => setOpenItem(item)} />
             ))}
@@ -210,7 +211,7 @@ export function MenuView() {
         <div className="anim-bar-up fixed inset-x-0 bottom-0 z-30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <Link
             href={`${basePath}/cart`}
-            className="mx-auto flex h-14 max-w-2xl items-center justify-between rounded-2xl bg-[var(--brand)] px-5 text-[var(--brand-fg)] shadow-lg transition-transform active:scale-[0.98]"
+            className="mx-auto flex h-14 max-w-2xl items-center justify-between rounded-md bg-[var(--brand)] px-5 text-[var(--brand-fg)] shadow-lg transition-transform active:scale-[0.98]"
           >
             <span className="text-sm">
               <span key={count} className="anim-pop inline-block font-semibold">
@@ -225,7 +226,16 @@ export function MenuView() {
         </div>
       )}
 
-      {openItem && <ItemSheet item={openItem} onClose={() => setOpenItem(null)} onAdd={addToCart} />}
+      {openItem && (
+        <ItemSheet
+          key={openItem.id}
+          item={openItem}
+          onClose={() => setOpenItem(null)}
+          onAdd={addToCart}
+          pairings={goesWellWith(openItem, items)}
+          onPick={setOpenItem}
+        />
+      )}
     </main>
   );
 }
@@ -243,53 +253,49 @@ function MenuRow({ item, index, canOrder, onOpen }: { item: MenuItem; index: num
 
   return (
     <li
-      className={`anim-rise flex gap-4 py-4 transition-opacity duration-500 ${available ? "" : "opacity-55"}`}
+      className={`anim-rise relative rounded-md border border-[var(--g-line)] bg-[var(--g-surface)] p-4 transition-opacity duration-500 ${available ? "" : "opacity-50"}`}
       style={{ "--i": Math.min(index, 12) } as React.CSSProperties}
     >
-      <button type="button" onClick={onOpen} disabled={!available || !canOrder} className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left">
-        <span className="flex items-center gap-2">
-          <DietMark diet={item.diet} />
-          {item.tags
-            .filter((t) => TAG_LABEL[t])
-            .map((t) => (
-              <span key={t} className="text-xs font-medium text-[var(--g-egg)]">
-                {TAG_LABEL[t]}
-              </span>
-            ))}
+      <button type="button" onClick={onOpen} disabled={!available || !canOrder} className="flex w-full gap-3 text-left">
+        <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <span className="flex flex-wrap items-center gap-1.5">
+            <DietMark diet={item.diet} />
+            {item.tags
+              .filter((t) => TAG_LABEL[t])
+              .map((t) => (
+                <span key={t} className="label-caps rounded-full bg-[color-mix(in_srgb,var(--g-accent)_12%,transparent)] px-2 py-0.5 text-[var(--g-accent)]">
+                  {TAG_LABEL[t]}
+                </span>
+              ))}
+          </span>
+          <span className="flex items-baseline justify-between gap-3">
+            <span className="font-heading text-xl leading-snug">{item.name}</span>
+            <span className="shrink-0 font-semibold tabular-nums">{formatINR(item.pricePaise)}</span>
+          </span>
+          {item.description && <span className="line-clamp-2 text-[13px] leading-[18px] text-[var(--g-muted)]">{item.description}</span>}
         </span>
-        <span className="font-semibold leading-snug">{item.name}</span>
-        <span className="text-sm font-medium tabular-nums">{formatINR(item.pricePaise)}</span>
-        {item.description && <span className="line-clamp-2 text-sm text-[var(--g-muted)]">{item.description}</span>}
+        {item.imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL
+          <img src={item.imageUrl} alt="" loading="lazy" className="size-20 shrink-0 rounded-md border border-[var(--g-line)] object-cover" />
+        )}
       </button>
 
-      <div className="relative flex w-28 shrink-0 flex-col items-center">
-        {item.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL
-          <img src={item.imageUrl} alt="" loading="lazy" className="size-28 rounded-xl object-cover" />
-        ) : (
-          <div aria-hidden className="grid size-28 place-items-center rounded-xl bg-[var(--g-soft)] font-heading text-3xl font-bold text-[var(--g-line)]">
-            {item.name.slice(0, 1)}
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--g-line)] pt-3">
+        <span className="label-caps text-[var(--g-muted)]">{!available ? "Sold out" : simple ? "" : "Customisable"}</span>
+        {!available || !canOrder ? null : simple && inCart > 0 ? (
+          <div className="anim-pop">
+            <QtyStepper qty={inCart} onChange={(qty) => setQty(simpleKey, qty)} size="sm" label={`Quantity of ${item.name}`} />
           </div>
+        ) : (
+          <button
+            type="button"
+            onClick={simple ? addSimple : onOpen}
+            aria-label={`Add ${item.name}`}
+            className="flex h-10 items-center gap-1.5 rounded bg-[var(--brand)] px-4 text-sm font-semibold text-[var(--brand-fg)] transition-transform duration-150 active:scale-[0.97]"
+          >
+            <Plus className="size-4" /> Add{inCart > 0 ? ` · ${inCart}` : ""}
+          </button>
         )}
-        <div className="-mt-5">
-          {!available ? (
-            <span className="anim-pop inline-block rounded-lg bg-[var(--g-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--g-muted)] shadow">Sold out</span>
-          ) : !canOrder ? null : simple && inCart > 0 ? (
-            <div className="anim-pop rounded-lg shadow">
-              <QtyStepper qty={inCart} onChange={(qty) => setQty(simpleKey, qty)} size="sm" label={`Quantity of ${item.name}`} />
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={simple ? addSimple : onOpen}
-              aria-label={`Add ${item.name}`}
-              className="h-9 rounded-lg border border-[var(--g-line)] bg-[var(--g-surface)] px-6 text-sm font-bold tracking-wide text-[var(--brand)] shadow transition-transform duration-150 hover:shadow-md active:scale-90"
-            >
-              ADD{inCart > 0 ? ` · ${inCart}` : ""}
-            </button>
-          )}
-        </div>
-        {!simple && available && canOrder && <span className="mt-1 text-[11px] text-[var(--g-muted)]">Customisable</span>}
       </div>
     </li>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Check, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { MenuItem, MenuOptionGroup } from "@/lib/menu-types";
@@ -35,9 +35,13 @@ interface ItemSheetProps {
   onClose: () => void;
   /** Where the configured item goes: the guest cart, or a staff order ticket. */
   onAdd: (line: NewCartLine) => void;
+  /** "Goes well with" (guest menu only). Simple items add in one tap; others open their own sheet. */
+  pairings?: MenuItem[];
+  onPick?: (item: MenuItem) => void;
 }
 
-export function ItemSheet({ item, onClose, onAdd }: ItemSheetProps) {
+export function ItemSheet({ item, onClose, onAdd, pairings = [], onPick }: ItemSheetProps) {
+  const [addedPairs, setAddedPairs] = useState<string[]>([]);
   const [selected, setSelected] = useState(() => defaultSelection(item.groups));
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState("");
@@ -182,6 +186,43 @@ export function ItemSheet({ item, onClose, onAdd }: ItemSheetProps) {
               className="h-11 w-full rounded-lg border border-[var(--g-line)] bg-[var(--g-bg)] px-3 outline-none focus:border-[var(--brand)]"
             />
           </div>
+
+          {pairings.length > 0 && (
+            <section aria-labelledby="pairs-title" className="border-t border-[var(--g-line)] px-5 py-4">
+              <h3 id="pairs-title" className="mb-3 font-heading text-lg">
+                Goes well with
+              </h3>
+              <ul className="no-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5">
+                {pairings.map((pair) => {
+                  const simple = pair.groups.length === 0;
+                  const added = addedPairs.includes(pair.id);
+                  return (
+                    <li key={pair.id} className="w-36 shrink-0">
+                      <button
+                        type="button"
+                        disabled={added}
+                        onClick={() => {
+                          if (!simple) return onPick?.(pair);
+                          onAdd({ itemId: pair.id, name: pair.name, optionIds: [], optionLabels: [], unitPricePaise: pair.pricePaise, qty: 1, note: "" });
+                          setAddedPairs((ids) => [...ids, pair.id]);
+                        }}
+                        aria-label={`${added ? "Added" : "Add"} ${pair.name}`}
+                        className="flex h-full w-full flex-col gap-2 rounded-md border border-[var(--g-line)] bg-[var(--g-bg)] p-3 text-left transition-colors hover:border-[var(--g-ink)]"
+                      >
+                        <span className="line-clamp-2 font-heading leading-snug">{pair.name}</span>
+                        <span className="mt-auto flex items-center justify-between text-sm">
+                          <span className="tabular-nums">+{formatINR(pair.pricePaise)}</span>
+                          <span className={`grid size-7 place-items-center rounded-full ${added ? "bg-[var(--g-sage)] text-white" : "bg-[var(--brand)] text-[var(--brand-fg)]"}`}>
+                            {added ? <Check className="anim-pop size-4" /> : <Plus className="size-4" />}
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
         </div>
 
         <div className="flex items-center gap-3 border-t border-[var(--g-line)] px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">

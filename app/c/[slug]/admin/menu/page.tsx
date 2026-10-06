@@ -36,7 +36,7 @@ export default async function MenuPage({ params }: PageProps<"/c/[slug]/admin/me
   const { cafe } = await requireStaff(slug, ["owner", "manager"], "/admin/menu");
   const supabase = await createUserClient();
 
-  const [categories, items] = await Promise.all([
+  const [categories, items, pairings] = await Promise.all([
     supabase.from("categories").select("id, name, is_visible, sort").eq("cafe_id", cafe.id).is("archived_at", null).order("sort"),
     supabase
       .from("menu_items")
@@ -48,11 +48,14 @@ export default async function MenuPage({ params }: PageProps<"/c/[slug]/admin/me
       .is("archived_at", null)
       .order("sort")
       .returns<ItemRow[]>(),
+    supabase.from("item_pairings").select("item_id, paired_item_id").eq("cafe_id", cafe.id).order("sort"),
   ]);
   if (categories.error) throw categories.error;
   if (items.error) throw items.error;
 
+  const pairsOf = (id: string) => (pairings.data ?? []).filter((p) => p.item_id === id).map((p) => p.paired_item_id);
   const adminItems: AdminItem[] = items.data.map((i) => ({
+    pairs: pairsOf(i.id),
     id: i.id,
     categoryId: i.category_id,
     name: i.name,

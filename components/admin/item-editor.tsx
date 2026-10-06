@@ -3,7 +3,7 @@
 import { ImagePlus, LoaderCircle, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { archiveItem, removeItemPhoto, saveItem, uploadItemPhoto } from "@/app/c/[slug]/admin/menu/actions";
+import { archiveItem, removeItemPhoto, saveItem, setItemPairings, uploadItemPhoto } from "@/app/c/[slug]/admin/menu/actions";
 import { paiseToInput, rupeesToPaise } from "@/lib/format";
 
 import type { AdminCategory, AdminGroup, AdminItem } from "./menu-manager";
@@ -13,6 +13,7 @@ interface Props {
   categories: AdminCategory[];
   item: AdminItem | null;
   defaultCategoryId: string;
+  allItems: AdminItem[];
   onClose: () => void;
   onSaved: () => void;
 }
@@ -43,7 +44,8 @@ const toDraft = (g: AdminGroup): GroupDraft => ({
 const input = "h-10 w-full rounded-lg bg-[var(--g-bg)] px-3 text-sm ring-1 ring-[var(--g-line)] outline-none focus:ring-2 focus:ring-[var(--brand)]";
 
 /** Add or edit one menu item, its photo and its option groups. Saved in one go [save_menu_item]. */
-export function ItemEditor({ tenantKey, categories, item, defaultCategoryId, onClose, onSaved }: Props) {
+export function ItemEditor({ tenantKey, categories, item, defaultCategoryId, allItems, onClose, onSaved }: Props) {
+  const [pairs, setPairs] = useState<string[]>(item?.pairs ?? []);
   const [id, setId] = useState(item?.id ?? null);
   const [name, setName] = useState(item?.name ?? "");
   const [description, setDescription] = useState(item?.description ?? "");
@@ -96,9 +98,21 @@ export function ItemEditor({ tenantKey, categories, item, defaultCategoryId, onC
       is_visible: visible,
       groups: parsedGroups,
     });
+    if (!result.ok) {
+      setBusy(null);
+      return setError(result.error);
+    }
+    const savedId = result.data ?? id;
+    if (savedId && pairs.join() !== (item?.pairs ?? []).join()) {
+      const paired = await setItemPairings(tenantKey, savedId, pairs);
+      if (!paired.ok) {
+        setBusy(null);
+        setId(savedId);
+        return setError(paired.error);
+      }
+    }
     setBusy(null);
-    if (!result.ok) return setError(result.error);
-    setId(result.data ?? id);
+    setId(savedId);
     setSaved(true);
     onSaved();
   }
@@ -240,6 +254,39 @@ export function ItemEditor({ tenantKey, categories, item, defaultCategoryId, onC
             <input id="item-visible" type="checkbox" checked={visible} onChange={(e) => setVisible(e.target.checked)} className="size-5 accent-[var(--brand)]" />
             Show on the menu
           </label>
+
+          <section className="flex flex-col gap-3 border-t border-[var(--g-line)] pt-5">
+            <div>
+              <h3 className="font-heading text-lg">Goes well with</h3>
+              <p className="text-sm text-[var(--g-muted)]">Up to 3 items suggested with this one. Items guests often order together are added automatically after these.</p>
+            </div>
+            {[0, 1, 2].map((slot) => (
+              <select
+                key={slot}
+                aria-label={`Suggestion ${slot + 1}`}
+                value={pairs[slot] ?? ""}
+                disabled={slot > pairs.length}
+                onChange={(e) =>
+                  setPairs((current) => {
+                    const next = [...current];
+                    if (e.target.value) next[slot] = e.target.value;
+                    else next.splice(slot, 1);
+                    return next.filter(Boolean);
+                  })
+                }
+                className={`${input} disabled:opacity-40`}
+              >
+                <option value="">{slot === 0 ? "No suggestion" : "None"}</option>
+                {allItems
+                  .filter((other) => other.id !== id && (other.id === pairs[slot] || !pairs.includes(other.id)))
+                  .map((other) => (
+                    <option key={other.id} value={other.id}>
+                      {other.name}
+                    </option>
+                  ))}
+              </select>
+            ))}
+          </section>
 
           <section className="flex flex-col gap-3 border-t border-[var(--g-line)] pt-5">
             <div>

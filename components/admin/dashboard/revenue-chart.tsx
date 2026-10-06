@@ -13,17 +13,17 @@ export interface DailyPoint {
 
 // Chart tokens (light surface; the owner panel is a light UI). Series slot 1 from the
 // validated palette; recessive one-step-off-surface grid.
-const SERIES = "#2a78d6";
-const SERIES_TODAY = "#184f95";
-const GRID = "#ebe8e2";
-const INK_2 = "#686660";
+const SERIES = "#a8a29e";
+const SERIES_TODAY = "#c25e3e";
+const GRID = "#e5dfd7";
+const INK_2 = "#78716c";
 
 // Recharts clones this element and passes the hovered point in `payload`.
 function DailyTooltip({ active, payload }: { active?: boolean; payload?: readonly { payload: DailyPoint }[] }) {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload as DailyPoint;
   return (
-    <div className="rounded-xl bg-[#1c1b18] px-3 py-2 text-sm text-white shadow-lg">
+    <div className="rounded-xl bg-[#1c1917] px-3 py-2 text-sm text-white shadow-lg">
       <p className="font-medium">{longDate(point.date)}</p>
       <p className="tabular-nums">{formatINR(point.revenue)}</p>
       <p className="text-white/70 tabular-nums">
@@ -57,7 +57,7 @@ export function RevenueChart({ data, today }: { data: DailyPoint[]; today: strin
             axisLine={false}
             width={64}
           />
-          <Tooltip content={<DailyTooltip />} cursor={{ fill: "rgba(42,120,214,0.08)" }} />
+          <Tooltip content={<DailyTooltip />} cursor={{ fill: "rgba(194,94,62,0.08)" }} />
           <Bar
             dataKey="revenue"
             name="Sales"

@@ -30,7 +30,7 @@ interface Dashboard {
 const RANGES = [7, 30, 90] as const;
 const METHOD_LABEL: Record<string, string> = { online: "Online", upi_counter: "UPI at counter", cash: "Cash", card_counter: "Card at counter", unpaid: "Not yet paid" };
 // Validated categorical slots 1-5, in fixed order (see the dataviz palette reference).
-const METHOD_COLOR: Record<string, string> = { online: "#2a78d6", upi_counter: "#eb6834", cash: "#1baf7a", card_counter: "#eda100", unpaid: "#e87ba4" };
+const METHOD_COLOR: Record<string, string> = { online: "#1c1917", upi_counter: "#c25e3e", cash: "#4a6b5d", card_counter: "#b7791f", unpaid: "#a8a29e" };
 const METHOD_ORDER = ["online", "upi_counter", "cash", "card_counter", "unpaid"];
 
 export default async function DashboardPage({ params, searchParams }: PageProps<"/c/[slug]/admin">) {
@@ -77,7 +77,7 @@ export default async function DashboardPage({ params, searchParams }: PageProps<
         <StatTile label={`Sales, last ${days} days`} value={formatINRShort(d.period_stats.revenue)} note={`${d.period_stats.orders.toLocaleString("en-IN")} orders · avg ${formatINR(avg(d.period_stats))}`} />
       </section>
 
-      <Card title="Daily sales" subtitle={`Last ${days} days · today in darker blue`}>
+      <Card title="Daily sales" subtitle={`Last ${days} days · today in terracotta`}>
         <RevenueChart data={d.daily} today={d.today} />
         <details className="mt-3 text-sm">
           <summary className="cursor-pointer text-[var(--g-muted)]">Show as a table</summary>

@@ -35,6 +35,8 @@ export interface AdminItem {
   isVisible: boolean;
   soldOut: boolean;
   groups: AdminGroup[];
+  /** Manual "Goes well with" picks, in order. */
+  pairs: string[];
 }
 export interface AdminCategory {
   id: string;
@@ -197,6 +199,7 @@ export function MenuManager({ tenantKey, categories, items }: Props) {
           categories={categories}
           item={editing === "new" ? null : editing}
           defaultCategoryId={category.id}
+          allItems={items}
           onClose={() => setEditing(null)}
           onSaved={() => router.refresh()}
         />

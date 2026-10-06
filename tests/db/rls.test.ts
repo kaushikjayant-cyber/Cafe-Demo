@@ -242,8 +242,8 @@ describe("schema shape", () => {
       select conrelid::regclass || ' -> ' || confrelid::regclass as pair
       from pg_constraint where contype = 'f' and connamespace = 'public'::regnamespace
       group by 1 having count(*) > 1 order by 1`);
-    // item_pairings legitimately points at two different menu items.
-    expect(rows.map((r) => r.pair)).toEqual(["item_pairings -> menu_items"]);
+    // item_pairings and auto_pairings legitimately point at two different menu items (never embedded).
+    expect(rows.map((r) => r.pair)).toEqual(["auto_pairings -> menu_items", "item_pairings -> menu_items"]);
   });
 });
 

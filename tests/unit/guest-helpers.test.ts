@@ -44,7 +44,7 @@ describe("orderingBlockedReason", () => {
   const cafe: GuestCafe = {
     id: "c", slug: "demo", name: "Demo", logoUrl: null, brandColor: "#0E7A63", timezone: IST, gstMode: "regular",
     taxRateBp: 500, pricesIncludeTax: true, allowPayAtCounter: true, onlinePayments: true, orderingPaused: false, pauseMessage: null,
-    isOpen: true, status: "active", isDemo: false,
+    isOpen: true, status: "active", isDemo: false, googleReviewUrl: null,
   };
   const table: GuestTable = { id: "t", label: "T1", token: "bbtable001", isActive: true };
 

@@ -9,6 +9,7 @@ import type { OrderStatus } from "@/lib/order-state";
 import { getBrowserClient, subscribeWhenReady } from "@/lib/supabase/browser";
 
 import { useGuest } from "./guest-provider";
+import { ReviewCard } from "./review-card";
 import { ServiceButtons } from "./service-buttons";
 import { SimulatedCheckout } from "./simulated-checkout";
 import { usePayment } from "./use-payment";
@@ -33,6 +34,7 @@ interface TrackedOrder {
   created_at: string;
   order_items: {
     id: string;
+    item_id: string | null;
     name_snapshot: string;
     qty: number;
     line_total_paise: number;
@@ -67,7 +69,7 @@ const HEADLINE: Record<OrderStatus, string> = {
 const SELECT =
   "id, daily_no, status, payment_status, guest_name, note, cancel_reason, subtotal_paise, tax_paise, round_off_paise, " +
   "total_paise, gst_mode, prices_include_tax, tax_rate_bp, created_at, payment_method, invoice_no, " +
-  "order_items(id, name_snapshot, qty, line_total_paise, options_snapshot, note, status)";
+  "order_items(id, item_id, name_snapshot, qty, line_total_paise, options_snapshot, note, status)";
 
 async function fetchOrder(orderId: string): Promise<TrackedOrder | null> {
   const { data } = await getBrowserClient().from("orders").select(SELECT).eq("id", orderId).maybeSingle<TrackedOrder>();
@@ -336,6 +338,13 @@ export function OrderTracker({ orderId, autoPay = false }: { orderId: string; au
           </div>
         </div>
       </section>
+
+      {(order.status === "served" || order.status === "completed" || (order.payment_status === "paid" && !stopped)) && (
+        <ReviewCard
+          orderId={order.id}
+          items={[...new Map(activeItems.filter((i) => i.item_id).map((i) => [i.item_id as string, { itemId: i.item_id as string, name: i.name_snapshot }])).values()]}
+        />
+      )}
 
       <div className="anim-rise flex flex-col gap-2" style={{ "--i": 5 } as React.CSSProperties}>
         {!stopped && order.payment_status === "unpaid" && cafe.onlinePayments && (

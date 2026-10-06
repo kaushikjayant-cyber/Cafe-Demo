@@ -30,6 +30,8 @@ export interface MenuItem {
   isAvailable: boolean;
   soldOutUntil: string | null;
   groups: MenuOptionGroup[];
+  /** "Goes well with": manual pairings first, then pairs guests often order together (§5.10). */
+  pairs: string[];
 }
 
 export interface MenuCategory {
@@ -55,6 +57,7 @@ export interface GuestCafe {
   isOpen: boolean;
   status: "trial" | "active" | "grace" | "suspended";
   isDemo: boolean;
+  googleReviewUrl: string | null;
 }
 
 export interface GuestTable {

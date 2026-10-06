@@ -10,8 +10,8 @@ export interface HeatCell {
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 // Sequential blue ramp (validated palette, steps 100 → 700): near-zero recedes to the surface.
-const RAMP = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
-const EMPTY = "#f3f1ec";
+const RAMP = ["#f4e3da", "#ebc7b6", "#dfa78f", "#d18667", "#c25e3e", "#9d4225", "#6e2c17"];
+const EMPTY = "#f3efea";
 
 function hourLabel(hour: number): string {
   return hour === 0 ? "12a" : hour < 12 ? `${hour}a` : hour === 12 ? "12p" : `${hour - 12}p`;

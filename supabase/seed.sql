@@ -19,7 +19,7 @@ begin
     fssai_no, invoice_prefix, tax_rate_bp, prices_include_tax, plan, status, is_demo,
     google_review_url
   ) values (
-    'demo', 'Brew & Bloom', '#0E7A63', 'regular', '29ABCDE1234F1Z5',
+    'demo', 'Brew & Bloom', '#1C1917', 'regular', '29ABCDE1234F1Z5',
     'Brew & Bloom Cafe (Demo)', '12, 100 Feet Road, Indiranagar, Bengaluru 560038',
     '+91 98765 43210', 'hello@brewandbloom.example', '11223344556677', 'BB', 500, true,
     'premium', 'active', true, 'https://www.google.com/search?q=Brew+%26+Bloom'

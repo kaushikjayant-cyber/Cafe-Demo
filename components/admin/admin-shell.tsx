@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, ClipboardList, LogOut, Menu as MenuIcon, QrCode, ReceiptText, Settings, UsersRound, UtensilsCrossed, X } from "lucide-react";
+import { BarChart3, ClipboardList, LogOut, Menu as MenuIcon, QrCode, ReceiptText, Settings, Star, UsersRound, UtensilsCrossed, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -13,6 +13,7 @@ const NAV: { path: string; label: string; icon: typeof BarChart3; ownerOnly?: bo
   { path: "/admin", label: "Dashboard", icon: BarChart3 },
   { path: "/admin/orders", label: "Orders & bills", icon: ReceiptText },
   { path: "/admin/menu", label: "Menu", icon: UtensilsCrossed },
+  { path: "/admin/reviews", label: "Reviews", icon: Star },
   { path: "/admin/tables", label: "Tables & QR", icon: QrCode },
   { path: "/admin/staff", label: "Staff", icon: UsersRound, ownerOnly: true },
   { path: "/admin/settings", label: "Settings", icon: Settings, ownerOnly: true },
@@ -44,7 +45,7 @@ export function AdminShell({ tenantKey, base, cafeName, staff, children }: Props
           onClick={() => setOpen(false)}
           aria-current={active(path) ? "page" : undefined}
           className={`flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors ${
-            active(path) ? "bg-[var(--brand)] text-[var(--brand-fg)]" : "text-[var(--g-muted)] hover:bg-[var(--g-soft)] hover:text-[var(--g-ink)]"
+            active(path) ? "bg-[color-mix(in_srgb,var(--g-accent)_12%,transparent)] text-[var(--g-accent)]" : "text-[var(--g-muted)] hover:bg-[var(--g-soft)] hover:text-[var(--g-ink)]"
           }`}
         >
           <Icon className="size-4" />

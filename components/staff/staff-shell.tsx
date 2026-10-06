@@ -102,7 +102,7 @@ export function StaffShell({ tenantKey, base, cafe, staff, connection, children 
                 aria-current={isActive(path) ? "page" : undefined}
                 className={`flex h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-medium transition-colors ${
                   isActive(path)
-                    ? "bg-[var(--brand)] text-[var(--brand-fg)]"
+                    ? "bg-[var(--g-accent)] text-white"
                     : "text-[var(--g-muted)] hover:bg-[var(--g-soft)] hover:text-[var(--g-ink)]"
                 }`}
               >
