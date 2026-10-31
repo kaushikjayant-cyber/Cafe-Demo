@@ -3,7 +3,7 @@
 import { ExternalLink, LoaderCircle, Star, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { useGuest } from "./guest-provider";
+import { SessionError, useGuest } from "./guest-provider";
 
 interface ReviewItem {
   itemId: string;
@@ -56,8 +56,8 @@ export function ReviewCard({ orderId, items }: { orderId: string; items: ReviewI
       }
       setError(data.message ?? "That didn't send. Please try again.");
       setState("open");
-    } catch {
-      setError("We couldn't reach the cafe. Check your connection and try again.");
+    } catch (error) {
+      setError(error instanceof SessionError ? error.message : "We couldn't reach the cafe. Check your connection and try again.");
       setState("open");
     }
   }

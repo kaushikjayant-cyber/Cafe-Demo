@@ -11,7 +11,7 @@ import type { CartProblem } from "@/lib/orders/validate";
 import { cartSuggestion } from "@/lib/upsell";
 
 import { cartCount, useCart, type CartLine } from "./cart-store";
-import { useGuest } from "./guest-provider";
+import { SessionError, useGuest } from "./guest-provider";
 import { ItemSheet } from "./item-sheet";
 import { QtyStepper } from "./qty-stepper";
 
@@ -130,9 +130,9 @@ export function CartView() {
       }
       setError(body.message ?? "Something went wrong. Please try again.");
       if (body.code === "ORDERING_CLOSED") router.refresh();
-    } catch {
+    } catch (error) {
       // The idempotency key is kept, so trying again can't create a second order.
-      setError("We couldn't reach the cafe. Check your connection and try again.");
+      setError(error instanceof SessionError ? error.message : "We couldn't reach the cafe. Check your connection and try again.");
     } finally {
       setSubmitting(false);
     }

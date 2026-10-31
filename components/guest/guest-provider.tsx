@@ -27,6 +27,9 @@ interface GuestContextValue extends GuestMenu {
   showNotice: (message: string) => void;
 }
 
+/** Starting the guest's anonymous session failed: not a network problem, so say so. */
+export class SessionError extends Error {}
+
 const GuestContext = createContext<GuestContextValue | null>(null);
 
 export function useGuest(): GuestContextValue {
@@ -117,7 +120,11 @@ export function GuestProvider({ menu, children }: { menu: GuestMenu; children: R
     const { data } = await supabase.auth.getSession();
     if (data.session) return data.session.user.id;
     const { data: created, error } = await supabase.auth.signInAnonymously();
-    if (error || !created.user) throw new Error("We couldn't start your session. Please reload the page.");
+    if (error || !created.user) {
+      // Most often the project has anonymous sign-ins switched off (Supabase → Authentication).
+      console.error("Guest session failed", error);
+      throw new SessionError("We couldn't start your order on this phone. Please ask a member of staff to take it.");
+    }
     return created.user.id;
   }, []);
 
