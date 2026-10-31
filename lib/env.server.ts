@@ -11,6 +11,11 @@ const serverSchema = z.object({
   DEMO_RAZORPAY_KEY_ID: z.string().optional(),
   DEMO_RAZORPAY_KEY_SECRET: z.string().optional(),
   CRON_SECRET: z.string().min(16).optional(),
+  // "Request a demo": where leads go. Without RESEND_API_KEY they're only saved, not emailed.
+  RESEND_API_KEY: z.string().startsWith("re_").optional(),
+  RESEND_FROM: z.string().min(3).default("Cafe QR <onboarding@resend.dev>"),
+  SALES_EMAIL: z.email().optional(),
+  SALES_WHATSAPP: z.string().optional(),
 });
 
 let cached: z.infer<typeof serverSchema> | undefined;

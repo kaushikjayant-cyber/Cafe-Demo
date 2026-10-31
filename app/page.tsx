@@ -2,6 +2,7 @@ import { ArrowRight, BellRing, ChefHat, ClipboardList, LayoutDashboard, QrCode, 
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { RequestDemo } from "@/components/request-demo";
 import { isSupabaseConfigured, platformName } from "@/lib/env";
 import { isTemporaryOrigin, qrSvg, siteOrigin, tableUrl } from "@/lib/qr";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -57,7 +58,9 @@ export default async function PlatformHome() {
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-12 px-5 py-10 md:py-16">
         <header className="anim-fade-in flex items-center justify-between">
           <span className="font-heading text-xl">{platformName()}</span>
-          <span className="label-caps rounded-full bg-[var(--g-soft)] px-3 py-1 text-[var(--g-muted)]">Live demo</span>
+          <a href="#request-demo" className="flex h-9 items-center rounded bg-[var(--brand)] px-4 text-sm font-semibold text-[var(--brand-fg)]">
+            Request a demo
+          </a>
         </header>
 
         <section className="grid items-center gap-10 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
@@ -133,6 +136,8 @@ export default async function PlatformHome() {
             </div>
           ))}
         </section>
+
+        <RequestDemo platform={platformName()} whatsapp={process.env.SALES_WHATSAPP?.replace(/\D/g, "") || null} />
 
         <footer className="mt-auto text-xs text-[var(--g-muted)]">
           The demo resets every morning. Orders you place here are not real and nothing is charged.
