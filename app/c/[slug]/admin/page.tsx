@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/admin/admin-shell";
 import { PeakHoursHeatmap, type HeatCell } from "@/components/admin/dashboard/heatmap";
 import { RevenueChart, type DailyPoint } from "@/components/admin/dashboard/revenue-chart";
+import { ResetDemoButton } from "@/components/admin/reset-demo-button";
 import { formatINRShort, percentChange, shortDate } from "@/lib/format";
 import { formatINR } from "@/lib/money";
 import { requireStaff } from "@/lib/staff-auth";
@@ -55,18 +56,21 @@ export default async function DashboardPage({ params, searchParams }: PageProps<
         title="Dashboard"
         description={`Business day ${shortDate(d.today)} · today compared with the same time last week`}
         actions={
-          <nav aria-label="Period" className="flex rounded-xl bg-[var(--g-soft)] p-1">
-            {RANGES.map((r) => (
-              <Link
-                key={r}
-                href={`${tenantHref(base, "/admin")}?days=${r}`}
-                aria-current={r === days ? "true" : undefined}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${r === days ? "bg-[var(--g-surface)] shadow-sm" : "text-[var(--g-muted)] hover:text-[var(--g-ink)]"}`}
-              >
-                {r} days
-              </Link>
-            ))}
-          </nav>
+          <>
+            {cafe.is_demo && <ResetDemoButton tenantKey={slug} />}
+            <nav aria-label="Period" className="flex rounded-xl bg-[var(--g-soft)] p-1">
+              {RANGES.map((r) => (
+                <Link
+                  key={r}
+                  href={`${tenantHref(base, "/admin")}?days=${r}`}
+                  aria-current={r === days ? "true" : undefined}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${r === days ? "bg-[var(--g-surface)] shadow-sm" : "text-[var(--g-muted)] hover:text-[var(--g-ink)]"}`}
+                >
+                  {r} days
+                </Link>
+              ))}
+            </nav>
+          </>
         }
       />
 

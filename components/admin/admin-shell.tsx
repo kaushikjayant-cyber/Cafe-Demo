@@ -72,7 +72,7 @@ export function AdminShell({ tenantKey, base, cafeName, staff, children }: Props
   );
 
   return (
-    <div className="flex min-h-dvh flex-1">
+    <div className="flex min-h-dvh min-w-0 flex-1">
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 border-r border-[var(--g-line)] bg-[var(--g-surface)] p-4 lg:flex print:hidden">
         <div className="px-1 pt-1">
           <p className="font-heading text-lg leading-tight font-bold">{cafeName}</p>

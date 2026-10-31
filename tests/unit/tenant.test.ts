@@ -96,3 +96,14 @@ describe("tenantHref", () => {
     expect(tenantHref("/c/demo", "/")).toBe("/c/demo");
   });
 });
+
+describe("routeRequest on the hosting provider's own address", () => {
+  it("treats the Render hostname as the platform even when PLATFORM_DOMAIN is a custom domain", () => {
+    const decision = routeRequest({ host: "cafe-platform.onrender.com", pathname: "/c/demo/login", platformDomain: "cafeqr.in", hostingDomain: "cafe-platform.onrender.com" });
+    expect(decision).toEqual({ action: "next", tenantBase: "/c/demo", tenantKey: "demo" });
+  });
+
+  it("without it, that host would be mistaken for a cafe's custom domain", () => {
+    expect(routeRequest({ host: "cafe-platform.onrender.com", pathname: "/c/demo/login", platformDomain: "cafeqr.in" })).toEqual({ action: "not_found" });
+  });
+});

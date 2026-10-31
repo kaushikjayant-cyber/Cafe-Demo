@@ -10,7 +10,10 @@ export async function proxy(request: NextRequest) {
   const decision = routeRequest({
     host: request.headers.get("host") ?? "",
     pathname: request.nextUrl.pathname,
-    platformDomain: process.env.PLATFORM_DOMAIN ?? "localhost:3000",
+    platformDomain: process.env.PLATFORM_DOMAIN || process.env.RENDER_EXTERNAL_HOSTNAME || "localhost:3000",
+    // Before a custom domain is set up (or if PLATFORM_DOMAIN is wrong), the Render address
+    // must still work as the platform, or /c/demo and staff logins 404.
+    hostingDomain: process.env.RENDER_EXTERNAL_HOSTNAME,
   });
 
   if (decision.action === "not_found") {

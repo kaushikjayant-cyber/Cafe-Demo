@@ -718,3 +718,16 @@ CSS-only animations (no library, keeping the customer JS budget), all in `app/gl
 - **153 tests** (+8)
 
 **Verified in the browser:** Cappuccino sheet shows Brownie (owner pick) then two auto pairs; cart offered "Add a Chocolate Brownie for ₹140?", and after adding it moved on to the next pairing; placed the order, marked it served → review card appeared; rated 2★ with a 👎 and a comment → saved, guest thanked and offered the Google link; a 1★ review popped up live on the counter and "Handled" cleared it; Reviews page shows 4.2 from 788 reviews.
+
+### Phase 6: Demo polish (2026-10-31)
+**Done**
+- **Launcher** at `/`: short pitch, a live QR code to the demo cafe's table T1 (generated from the request's own address, with a note when that address only works locally), and one-tap entries for Guest, Counter, Kitchen and Owner. The demo cafe's page `/c/demo` also lists tables T1–T6 and the staff screens (demo cafe only; real cafes never expose table links).
+- **Reset demo** (§5.14): `reset_demo_cafe` wipes the demo cafe's orders, payments, refunds, reviews, table requests, counters and audit log; switches sold-out items, paused tables and paused ordering back on; then regenerates 60 days of history up to now, reviews with thumbs, and the upsell cache. Demo cafes only, service role only, at most once every 2 minutes. A **Reset demo** button (two taps) on the demo's dashboard, and a nightly reset at 05:00 IST (after the 04:00 business-day start) for every demo cafe, which also keeps a free-tier Supabase project from pausing [R13]. Menu, tables, staff and settings are kept: they are the demo's setup.
+- `generate_demo_reviews` replaces the inline review SQL in `seed-history.sql`, so the seed and the reset share it.
+- **Phone QA** at 375 px: every guest, staff and owner page now fits without sideways scrolling. Fixed: the owner layout grew to the width of the orders table, and on Settings the long webhook URL widened its fieldset (fieldsets default to `min-width: min-content`) and the one-column grid.
+- Production build (`next build`) passes.
+- **155 tests** (+2)
+
+**Verified in the browser:** launcher renders with a scannable QR; Reset demo → "Fresh demo: 5,732 orders over 60 days", dashboard shows today's sales again; a second reset straight away is refused; phone-width checks on all pages.
+
+**Not done here:** the spec's "35 items with photos" (the demo menu has no photos yet; needs licensed images), and the menu performance budget (LCP / JS size) still has to be measured on the deployed site with a phone-class profile.

@@ -199,6 +199,10 @@
 .guest .shadow-lg, .guest .shadow-xl, .guest .shadow-2xl {
   box-shadow: 0 4px 20px -2px rgba(28, 25, 23, 0.05), 0 2px 6px -1px rgba(28, 25, 23, 0.03);
 }
+/* Fieldsets default to min-width: min-content, so a long URL inside one widens the page on phones. */
+.guest fieldset {
+  min-width: 0;
+}
 .guest input:focus-visible, .guest textarea:focus-visible, .guest select:focus-visible {
   border-color: var(--g-ink);
   outline: none;

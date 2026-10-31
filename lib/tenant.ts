@@ -27,6 +27,8 @@ export interface RouteInput {
   host: string;
   pathname: string;
   platformDomain: string;
+  /** The host's own address (Render sets RENDER_EXTERNAL_HOSTNAME), always treated as the platform. */
+  hostingDomain?: string;
 }
 
 function stripPort(host: string): string {
@@ -41,7 +43,7 @@ export function isValidSlug(slug: string): boolean {
   return SLUG_PATTERN.test(slug) && !RESERVED_SLUGS.has(slug);
 }
 
-export function routeRequest({ host, pathname, platformDomain }: RouteInput): RouteDecision {
+export function routeRequest({ host, pathname, platformDomain, hostingDomain }: RouteInput): RouteDecision {
   const hostname = stripPort(host);
   const platform = stripPort(platformDomain);
   const segment = firstSegment(pathname);
@@ -50,7 +52,11 @@ export function routeRequest({ host, pathname, platformDomain }: RouteInput): Ro
   if (segment === "t" || segment === "api") return { action: "next" };
 
   const isPlatformHost =
-    hostname === platform || hostname === `www.${platform}` || hostname === "localhost" || hostname === "127.0.0.1";
+    hostname === platform ||
+    hostname === `www.${platform}` ||
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    (!!hostingDomain && hostname === stripPort(hostingDomain));
 
   if (isPlatformHost) {
     if (segment !== "c") return { action: "next" };

@@ -83,7 +83,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 export function SettingsForms({ tenantKey, settings }: { tenantKey: string; settings: CafeSettings }) {
   return (
-    <div className="grid items-start gap-6 xl:grid-cols-2">
+    <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
       <BrandingForm tenantKey={tenantKey} settings={settings} />
       <BusinessForm tenantKey={tenantKey} settings={settings} />
       <OrderingForm tenantKey={tenantKey} settings={settings} />

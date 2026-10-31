@@ -18,7 +18,7 @@ Needs **Node 22+** (`nvm use 22`) and **Docker Desktop** running.
 ```bash
 npm install
 npx supabase start           # local Supabase in Docker; applies migrations + seed
-npm run dev                  # http://localhost:3000/c/demo
+npm run dev                  # http://localhost:3000 (demo launcher)
 ```
 
 Environment files:
@@ -34,19 +34,25 @@ migrated + seeded state (including 60 days of demo orders) with `npx supabase db
 
 ### Demo cafe screens
 
+Start at <http://localhost:3000>: the launcher has a live QR for table T1 and one-tap links to every role.
+The demo cafe's own page `/c/demo` lists its tables too.
+
 | Screen | URL (local) | Login |
 |---|---|---|
+| Demo launcher | `/` | none |
 | Guest menu (table T1) | `/t/bbtable001` | none |
 | Counter board | `/c/demo/staff` | `counter` |
 | New order (staff) | `/c/demo/staff/new` | `counter` |
 | Kitchen display | `/c/demo/kitchen` | `kitchen` |
 | Stock | `/c/demo/staff/stock` | any staff |
-| Owner dashboard | `/c/demo/admin` | `owner` |
+| Owner dashboard (with **Reset demo**) | `/c/demo/admin` | `owner` |
 | Orders & bills, CSV export | `/c/demo/admin/orders` | `owner` |
 | Menu editor | `/c/demo/admin/menu` | `owner` |
 | Tables & printable QR cards | `/c/demo/admin/tables` | `owner` |
 | Staff logins | `/c/demo/admin/staff` | `owner` |
 | Settings (brand, GST, hours, Razorpay keys) | `/c/demo/admin/settings` | `owner` |
+
+The demo resets itself every morning (05:00 IST) with 60 days of history up to that day; **Reset demo** on the dashboard does it on demand (at most once every 2 minutes).
 
 Demo password: see `lib/demo.ts` (demo cafe only; the login page offers one-tap demo sign-in).
 
