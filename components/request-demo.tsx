@@ -25,15 +25,16 @@ export function RequestDemo({ platform, whatsapp }: Props) {
   const missingRequired = !form.name.trim() || !form.cafe.trim() || !form.city.trim();
   const noContact = !form.phone.trim() && !form.email.trim();
 
+  // WhatsApp opens even with an empty form: whatever is filled in goes into the message.
   const details = [
-    `Name: ${form.name.trim()}`,
-    `Cafe: ${form.cafe.trim()}`,
-    `City: ${form.city.trim()}`,
+    form.name.trim() ? `Name: ${form.name.trim()}` : null,
+    form.cafe.trim() ? `Cafe: ${form.cafe.trim()}` : null,
+    form.city.trim() ? `City: ${form.city.trim()}` : null,
     form.tables.trim() ? `Tables: ${form.tables.trim()}` : null,
     form.note.trim() ? `Note: ${form.note.trim()}` : null,
   ].filter(Boolean);
   const whatsappHref = whatsapp
-    ? `https://wa.me/${whatsapp}?text=${encodeURIComponent([`Hi! I'd like a demo of ${platform} for my cafe.`, "", ...details].join("\n"))}`
+    ? `https://wa.me/${whatsapp}?text=${encodeURIComponent([`Hi! I'd like a demo of ${platform} for my cafe.`, ...(details.length ? ["", ...details] : [])].join("\n"))}`
     : null;
 
   async function submit(e: React.FormEvent) {
@@ -131,10 +132,6 @@ export function RequestDemo({ platform, whatsapp }: Props) {
             {whatsappHref && (
               <a
                 href={whatsappHref}
-                onClick={(e) => {
-                  setTried(true);
-                  if (missingRequired) e.preventDefault();
-                }}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex h-12 flex-1 items-center justify-center gap-2 rounded border border-[#1f7a4d] px-5 font-semibold text-[#1f7a4d] transition-colors hover:bg-[#1f7a4d] hover:text-white"
