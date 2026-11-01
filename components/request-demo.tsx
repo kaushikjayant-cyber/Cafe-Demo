@@ -65,13 +65,10 @@ export function RequestDemo({ platform, whatsapp }: Props) {
       className="grid scroll-mt-6 gap-8 rounded-md border border-[var(--g-line)] bg-[var(--g-surface)] p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] md:p-8"
     >
       <div className="flex flex-col gap-3">
-        <p className="label-caps text-[var(--g-accent)]">Like what you see?</p>
+        <p className="text-[var(--g-accent)]">Like what you see?</p>
         <h2 id="request-title" className="font-heading text-3xl leading-tight">
           Request a demo for your cafe
         </h2>
-        <p className="text-[var(--g-muted)]">
-          We&apos;ll set it up with your own menu and walk you through it, usually the same day. Tell us a little about your cafe and we&apos;ll get back to you.
-        </p>
         <ul className="mt-2 flex flex-col gap-1.5 text-sm">
           <li>✓ Your menu, prices and GST on a live demo</li>
           <li>✓ QR cards for your tables</li>

@@ -21,3 +21,15 @@ export function tableUrl(origin: string, token: string): string {
 export function qrSvg(url: string): Promise<string> {
   return QRCode.toString(url, { type: "svg", errorCorrectionLevel: "M", margin: 1, color: { dark: "#111111", light: "#ffffff" } });
 }
+
+/** The dark modules of a QR code as one SVG path (one unit per module), for large decorative use. */
+export function qrModulesPath(text: string): { size: number; path: string } {
+  const { modules } = QRCode.create(text, { errorCorrectionLevel: "M" });
+  let path = "";
+  for (let row = 0; row < modules.size; row++) {
+    for (let col = 0; col < modules.size; col++) {
+      if (modules.get(row, col)) path += `M${col} ${row}h1v1h-1z`;
+    }
+  }
+  return { size: modules.size, path };
+}
